@@ -6,9 +6,10 @@ undocumented ui-api endpoints for dashboard management.
 
 from __future__ import annotations
 
+import json
 from typing import TYPE_CHECKING, Any
 
-import httpx
+import aiohttp
 import yaml
 
 if TYPE_CHECKING:
@@ -31,7 +32,7 @@ class LogfireNotFoundError(LogfireClientError):
 
 
 class LogfireClient:
-    """Client for interacting with the Logfire dashboard API.
+    """Async client for interacting with the Logfire dashboard API.
 
     This client provides methods for managing Perses dashboards through
     Logfire's ui-api endpoints.
@@ -44,12 +45,12 @@ class LogfireClient:
         timeout: Request timeout in seconds.
 
     Example:
-        >>> client = LogfireClient(
+        >>> async with LogfireClient(
         ...     token="your-token",
         ...     organization="my-org",
         ...     project="my-project",
-        ... )
-        >>> dashboards = client.list_dashboards()
+        ... ) as client:
+        ...     dashboards = await client.list_dashboards()
     """
 
     def __init__(
@@ -65,8 +66,8 @@ class LogfireClient:
         self.organization = organization
         self.project = project
         self.base_url = base_url.rstrip('/')
-        self.timeout = timeout
-        self._client: httpx.Client | None = None
+        self.timeout = aiohttp.ClientTimeout(total=timeout)
+        self._session: aiohttp.ClientSession | None = None
 
     @property
     def _headers(self) -> dict[str, str]:
@@ -76,16 +77,15 @@ class LogfireClient:
             'Content-Type': 'application/json',
         }
 
-    @property
-    def client(self) -> httpx.Client:
-        """Get or create the HTTP client."""
-        if self._client is None:
-            self._client = httpx.Client(
+    async def _get_session(self) -> aiohttp.ClientSession:
+        """Get or create the aiohttp session."""
+        if self._session is None or self._session.closed:
+            self._session = aiohttp.ClientSession(
                 base_url=self.base_url,
                 headers=self._headers,
                 timeout=self.timeout,
             )
-        return self._client
+        return self._session
 
     def _dashboard_url(self, slug: str | None = None) -> str:
         """Build the URL for dashboard operations.
@@ -101,7 +101,7 @@ class LogfireClient:
             return f'{base}/{slug}/'
         return f'{base}/'
 
-    def _handle_response(self, response: httpx.Response) -> dict[str, Any]:
+    async def _handle_response(self, response: aiohttp.ClientResponse) -> dict[str, Any]:
         """Handle API response and raise appropriate exceptions.
 
         Args:
@@ -115,23 +115,22 @@ class LogfireClient:
             LogfireNotFoundError: If the resource is not found.
             LogfireClientError: For other HTTP errors.
         """
-        if response.status_code == 401:  # noqa: PLR2004
+        if response.status == 401:  # noqa: PLR2004
             msg = 'Invalid or expired authentication token'
             raise LogfireAuthenticationError(msg)
-        if response.status_code == 403:  # noqa: PLR2004
+        if response.status == 403:  # noqa: PLR2004
             msg = 'Access denied to this resource'
             raise LogfireAuthenticationError(msg)
-        if response.status_code == 404:  # noqa: PLR2004
+        if response.status == 404:  # noqa: PLR2004
             msg = 'Dashboard not found'
             raise LogfireNotFoundError(msg)
-        try:
-            response.raise_for_status()
-        except httpx.HTTPStatusError as e:
-            msg = f'API request failed: {e}'
-            raise LogfireClientError(msg) from e
-        return response.json()
+        if not response.ok:
+            text = await response.text()
+            msg = f'API request failed with status {response.status}: {text}'
+            raise LogfireClientError(msg)
+        return await response.json()
 
-    def list_dashboards(self) -> list[dict[str, Any]]:
+    async def list_dashboards(self) -> list[dict[str, Any]]:
         """List all dashboards in the project.
 
         Returns:
@@ -140,14 +139,15 @@ class LogfireClient:
         Raises:
             LogfireClientError: If the request fails.
         """
-        response = self.client.get(self._dashboard_url())
-        result = self._handle_response(response)
+        session = await self._get_session()
+        async with session.get(self._dashboard_url()) as response:
+            result = await self._handle_response(response)
         # The API returns a list of dashboards
         if isinstance(result, list):
             return result
         return [result]
 
-    def get_dashboard(self, slug: str) -> dict[str, Any]:
+    async def get_dashboard(self, slug: str) -> dict[str, Any]:
         """Get a dashboard by slug.
 
         Args:
@@ -160,12 +160,13 @@ class LogfireClient:
             LogfireNotFoundError: If the dashboard doesn't exist.
             LogfireClientError: If the request fails.
         """
-        response = self.client.get(self._dashboard_url(slug))
-        data = self._handle_response(response)
+        session = await self._get_session()
+        async with session.get(self._dashboard_url(slug)) as response:
+            data = await self._handle_response(response)
         # Extract the Perses definition from the response
         return data.get('definition', data)
 
-    def put_dashboard(self, slug: str, definition: dict[str, Any]) -> dict[str, Any]:
+    async def put_dashboard(self, slug: str, definition: dict[str, Any]) -> dict[str, Any]:
         """Create or update a dashboard.
 
         Args:
@@ -178,13 +179,14 @@ class LogfireClient:
         Raises:
             LogfireClientError: If the request fails.
         """
-        response = self.client.put(
+        session = await self._get_session()
+        async with session.put(
             self._dashboard_url(slug),
-            json={'definition': definition},
-        )
-        return self._handle_response(response)
+            data=json.dumps({'definition': definition}),
+        ) as response:
+            return await self._handle_response(response)
 
-    def delete_dashboard(self, slug: str) -> None:
+    async def delete_dashboard(self, slug: str) -> None:
         """Delete a dashboard.
 
         Args:
@@ -194,11 +196,12 @@ class LogfireClient:
             LogfireNotFoundError: If the dashboard doesn't exist.
             LogfireClientError: If the request fails.
         """
-        response = self.client.delete(self._dashboard_url(slug))
-        if response.status_code != 204:  # noqa: PLR2004
-            self._handle_response(response)
+        session = await self._get_session()
+        async with session.delete(self._dashboard_url(slug)) as response:
+            if response.status != 204:  # noqa: PLR2004
+                await self._handle_response(response)
 
-    def pull(self, slug: str, output_path: Path) -> None:
+    async def pull(self, slug: str, output_path: Path) -> None:
         """Export a dashboard to a YAML file.
 
         Args:
@@ -209,11 +212,11 @@ class LogfireClient:
             LogfireNotFoundError: If the dashboard doesn't exist.
             LogfireClientError: If the request fails.
         """
-        definition = self.get_dashboard(slug)
+        definition = await self.get_dashboard(slug)
         with output_path.open('w') as f:
             yaml.dump(definition, f, default_flow_style=False, sort_keys=False, allow_unicode=True)
 
-    def push(self, yaml_path: Path, slug: str | None = None) -> dict[str, Any]:
+    async def push(self, yaml_path: Path, slug: str | None = None) -> dict[str, Any]:
         """Import a dashboard from a YAML file.
 
         Args:
@@ -225,7 +228,8 @@ class LogfireClient:
 
         Raises:
             LogfireClientError: If the request fails.
-            ValueError: If the YAML is invalid or missing required fields.
+            TypeError: If the YAML is not a dictionary.
+            ValueError: If the YAML is missing required fields.
         """
         with yaml_path.open() as f:
             definition = yaml.safe_load(f)
@@ -242,20 +246,20 @@ class LogfireClient:
                 msg = 'Dashboard must have metadata.name or provide explicit slug'
                 raise ValueError(msg)
             derived_slug: str = name.lower().replace(' ', '-').replace('_', '-')
-            return self.put_dashboard(derived_slug, definition)
+            return await self.put_dashboard(derived_slug, definition)
 
-        return self.put_dashboard(slug, definition)
+        return await self.put_dashboard(slug, definition)
 
-    def close(self) -> None:
-        """Close the HTTP client."""
-        if self._client is not None:
-            self._client.close()
-            self._client = None
+    async def close(self) -> None:
+        """Close the aiohttp session."""
+        if self._session is not None and not self._session.closed:
+            await self._session.close()
+            self._session = None
 
-    def __enter__(self) -> LogfireClient:
-        """Enter context manager."""
+    async def __aenter__(self) -> LogfireClient:
+        """Enter async context manager."""
         return self
 
-    def __exit__(self, *_: object) -> None:
-        """Exit context manager."""
-        self.close()
+    async def __aexit__(self, *_: object) -> None:
+        """Exit async context manager."""
+        await self.close()

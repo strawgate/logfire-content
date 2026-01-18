@@ -5,6 +5,7 @@ This module provides the main CLI commands for managing Logfire dashboards.
 
 from __future__ import annotations
 
+import asyncio
 import os
 import subprocess
 import sys
@@ -27,7 +28,7 @@ if TYPE_CHECKING:
     from collections.abc import Callable
 
 # Configure rich-click styling
-click.rich_click.USE_RICH_MARKUP = True
+click.rich_click.TEXT_MARKUP = 'rich'
 click.rich_click.SHOW_ARGUMENTS = True
 click.rich_click.GROUP_ARGUMENTS_OPTIONS = True
 
@@ -158,8 +159,12 @@ def cli(
 @handle_errors
 def list_dashboards(ctx: click.Context) -> None:
     """List all dashboards in the project."""
-    with get_client_from_context(ctx) as client:
-        dashboards = client.list_dashboards()
+
+    async def _list() -> list[dict]:
+        async with get_client_from_context(ctx) as client:
+            return await client.list_dashboards()
+
+    dashboards = asyncio.run(_list())
 
     if not dashboards:
         console.print('[yellow]No dashboards found.[/yellow]')
@@ -198,9 +203,11 @@ def pull(ctx: click.Context, slug: str, output: Path | None) -> None:
     if output is None:
         output = Path(f'{slug}.yaml')
 
-    with get_client_from_context(ctx) as client:
-        client.pull(slug, output)
+    async def _pull() -> None:
+        async with get_client_from_context(ctx) as client:
+            await client.pull(slug, output)
 
+    asyncio.run(_pull())
     console.print(f'[green]Dashboard exported to:[/green] {output}')
 
 
@@ -218,9 +225,12 @@ def push(ctx: click.Context, file: Path, slug: str | None) -> None:
 
     FILE is the path to the YAML dashboard file.
     """
-    with get_client_from_context(ctx) as client:
-        result = client.push(file, slug)
 
+    async def _push() -> dict:
+        async with get_client_from_context(ctx) as client:
+            return await client.push(file, slug)
+
+    result = asyncio.run(_push())
     dashboard_slug = result.get('slug', slug or 'unknown')
     console.print(f'[green]Dashboard pushed successfully:[/green] {dashboard_slug}')
 
@@ -238,9 +248,11 @@ def delete(ctx: click.Context, slug: str, yes: bool) -> None:
     if not yes:
         click.confirm(f'Are you sure you want to delete dashboard "{slug}"?', abort=True)
 
-    with get_client_from_context(ctx) as client:
-        client.delete_dashboard(slug)
+    async def _delete() -> None:
+        async with get_client_from_context(ctx) as client:
+            await client.delete_dashboard(slug)
 
+    asyncio.run(_delete())
     console.print(f'[green]Dashboard deleted:[/green] {slug}')
 
 
@@ -255,9 +267,11 @@ def get_dashboard(ctx: click.Context, slug: str) -> None:
     """
     import yaml
 
-    with get_client_from_context(ctx) as client:
-        definition = client.get_dashboard(slug)
+    async def _get() -> dict:
+        async with get_client_from_context(ctx) as client:
+            return await client.get_dashboard(slug)
 
+    definition = asyncio.run(_get())
     console.print(yaml.dump(definition, default_flow_style=False, sort_keys=False, allow_unicode=True))
 
 
@@ -308,7 +322,7 @@ def lint(files: tuple[Path, ...], strict: bool) -> None:  # noqa: ARG001
             try:
                 _validate_yaml_structure(file_path)
                 console.print(f'[green]Valid:[/green] {file_path}')
-            except ValueError as e:
+            except (TypeError, ValueError) as e:
                 has_errors = True
                 error_console.print(f'[red]Validation failed:[/red] {file_path}')
                 error_console.print(f'  {e}')
@@ -342,6 +356,7 @@ def _validate_yaml_structure(path: Path) -> None:
         path: Path to the YAML file.
 
     Raises:
+        TypeError: If the YAML is not a dictionary.
         ValueError: If the YAML structure is invalid.
     """
     import yaml

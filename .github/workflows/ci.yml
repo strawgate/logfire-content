@@ -1,15 +1,13 @@
+---
 name: CI
-
 on:
   push:
     branches: [main, master]
   pull_request:
     branches: [main, master]
-
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
-
 jobs:
   lint:
     name: Lint
@@ -26,7 +24,6 @@ jobs:
         run: make markdownlint
       - name: Run yamlfix check
         run: make yamlfix-check
-
   typecheck:
     name: Type Check
     runs-on: ubuntu-latest
@@ -35,7 +32,6 @@ jobs:
       - uses: ./.github/actions/setup-python-env
       - name: Run type checking
         run: make typecheck
-
   test:
     name: Test (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
@@ -48,7 +44,6 @@ jobs:
       - uses: ./.github/actions/setup-python-env
       - name: Run tests
         run: make test
-
   coverage:
     name: Coverage
     runs-on: ubuntu-latest
@@ -62,7 +57,6 @@ jobs:
         uses: codecov/codecov-action@v4
         with:
           fail_ci_if_error: true
-
   docs:
     name: Build Docs
     runs-on: ubuntu-latest
@@ -73,7 +67,6 @@ jobs:
           install-docs: 'true'
       - name: Build documentation
         run: make docs
-
   all-checks:
     name: All Checks Passed
     runs-on: ubuntu-latest

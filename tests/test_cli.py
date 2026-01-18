@@ -92,15 +92,7 @@ class TestCLI:
     def test_export(self, runner: CliRunner, env_vars: dict[str, str], sample_dashboard: dict[str, Any], tmp_path: Path) -> None:
         """Test exporting a dashboard to a file."""
         wrapped_response = {
-            'id': str(uuid4()),
-            'project_id': str(uuid4()),
-            'created_at': '2024-01-01T00:00:00Z',
-            'updated_at': '2024-01-02T00:00:00Z',
-            'created_by_name': 'test-user',
-            'updated_by_name': 'test-user',
-            'dashboard_name': 'test-dashboard',
-            'dashboard_slug': 'test-dashboard',
-            'definition': sample_dashboard,
+            'dashboard': sample_dashboard,
         }
         with aioresponses() as m:
             m.get(  # pyright: ignore[reportUnknownMemberType]
@@ -149,15 +141,7 @@ class TestCLI:
     def test_get(self, runner: CliRunner, env_vars: dict[str, str], sample_dashboard: dict[str, Any]) -> None:
         """Test getting dashboard details."""
         wrapped_response = {
-            'id': str(uuid4()),
-            'project_id': str(uuid4()),
-            'created_at': '2024-01-01T00:00:00Z',
-            'updated_at': '2024-01-02T00:00:00Z',
-            'created_by_name': 'test-user',
-            'updated_by_name': 'test-user',
-            'dashboard_name': 'test-dashboard',
-            'dashboard_slug': 'test-dashboard',
-            'definition': sample_dashboard,
+            'dashboard': sample_dashboard,
         }
         with aioresponses() as m:
             m.get(  # pyright: ignore[reportUnknownMemberType]

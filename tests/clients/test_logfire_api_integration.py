@@ -152,25 +152,27 @@ async def test_crud_dashboard(
     retrieved = await client.get_dashboard(slug)
     assert isinstance(retrieved, Dashboard)
 
-    assert retrieved.model_dump() == snapshot({
-        'kind': 'Dashboard',
-        'metadata': {
-            'name': 'test-create-simple-dashboard',
-            'project': 'starter-project',
-            'version': 0,
-            'created_at': IsStr(),
-            'updated_at': IsStr(),
-        },
-        'spec': {
-            'display': {'name': 'test-create-simple-dashboard', 'description': None},
-            'datasources': {},
-            'panels': {},
-            'layouts': [],
-            'variables': [],
-            'duration': '1h',
-            'refresh_interval': '0s',
-        },
-    })
+    assert retrieved.model_dump() == snapshot(
+        {
+            'kind': 'Dashboard',
+            'metadata': {
+                'name': 'test-create-simple-dashboard',
+                'project': 'starter-project',
+                'version': 0,
+                'created_at': IsStr(),
+                'updated_at': IsStr(),
+            },
+            'spec': {
+                'display': {'name': 'test-create-simple-dashboard', 'description': None},
+                'datasources': {},
+                'panels': {},
+                'layouts': [],
+                'variables': [],
+                'duration': '1h',
+                'refresh_interval': '0s',
+            },
+        }
+    )
 
     # Update the dashboard
     updated_dashboard_dict: dict[str, Any] = {
@@ -192,25 +194,27 @@ async def test_crud_dashboard(
     updated_dashboard = Dashboard.model_validate(updated_dashboard_dict)
     updated = await client.update_dashboard(slug, updated_dashboard)
 
-    assert updated.model_dump() == snapshot({
-        'kind': 'Dashboard',
-        'metadata': {
-            'name': 'test-create-simple-dashboard',
-            'project': 'starter-project',
-            'version': 0,
-            'created_at': IsStr(),
-            'updated_at': IsStr(),
-        },
-        'spec': {
-            'display': {'name': 'test-create-simple-dashboard', 'description': 'my cool description'},
-            'datasources': {},
-            'panels': {},
-            'layouts': [],
-            'variables': [],
-            'duration': '1h',
-            'refresh_interval': '0s',
-        },
-    })
+    assert updated.model_dump() == snapshot(
+        {
+            'kind': 'Dashboard',
+            'metadata': {
+                'name': 'test-create-simple-dashboard',
+                'project': 'starter-project',
+                'version': 0,
+                'created_at': IsStr(),
+                'updated_at': IsStr(),
+            },
+            'spec': {
+                'display': {'name': 'test-create-simple-dashboard', 'description': 'my cool description'},
+                'datasources': {},
+                'panels': {},
+                'layouts': [],
+                'variables': [],
+                'duration': '1h',
+                'refresh_interval': '0s',
+            },
+        }
+    )
 
     # Clean up: delete the dashboard
     await client.delete_dashboard(slug)

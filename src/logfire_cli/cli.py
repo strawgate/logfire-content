@@ -136,7 +136,7 @@ def cli(
 ) -> None:
     """Logfire CLI - Manage Pydantic Logfire dashboards.
 
-    A CLI tool for interacting with Logfire's dashboard API to pull, push,
+    A CLI tool for interacting with Logfire's dashboard API to export, import,
     list, and validate Perses YAML dashboards.
 
     [bold]Configuration:[/bold]

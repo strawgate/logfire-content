@@ -6,7 +6,7 @@ undocumented ui-api endpoints for dashboard management.
 
 import json
 from types import TracebackType
-from typing import Any, TypeGuard
+from typing import Any
 
 import aiohttp
 from pydantic import BaseModel
@@ -27,17 +27,6 @@ class LogfireAuthenticationError(LogfireClientError):
 
 class LogfireNotFoundError(LogfireClientError):
     """Raised when a requested resource is not found."""
-
-
-# Define the specific type we expect
-JsonDict = dict[str, Any]
-
-
-def is_json_dict(val: Any) -> TypeGuard[JsonDict]:  # pyright: ignore[reportAny]
-    """Checks if a value is a dictionary and all keys are strings."""
-    if not isinstance(val, dict):
-        return False
-    return all(isinstance(key, str) for key in val)  # pyright: ignore[reportUnknownVariableType]
 
 
 class LogfireClient:

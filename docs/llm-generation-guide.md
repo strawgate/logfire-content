@@ -268,5 +268,5 @@ Return the complete dashboard YAML with proper layout.
 2. **Show Examples** - Include working query examples
 3. **Specify Format** - Request specific panel types and layouts
 4. **Iterate** - Review output and ask for corrections
-5. **Validate** - Validate YAML syntax and structure before pushing (use
+5. **Validate** - Validate YAML syntax and structure before importing (use
    `percli lint` if available)

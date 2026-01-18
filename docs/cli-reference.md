@@ -260,6 +260,6 @@ done
     LOGFIRE_PROJECT: production
   run: |
     for f in integrations/*/overview.yaml; do
-      logfire-cli push "$f"
+      logfire-cli dashboards import "$f"
     done
 ```

@@ -1,0 +1,141 @@
+# OpenTelemetry Collector configuration for Host Metrics
+# This configuration collects system-level metrics and exports them to Logfire.
+#
+# Usage:
+#   1. Set LOGFIRE_TOKEN environment variable
+#   2. Run: otelcol --config collector.yaml
+#
+# For production, consider:
+#   - Adjusting collection_interval based on your needs (30s-60s recommended)
+#   - Filtering specific devices/filesystems if you have many
+#   - Adding resource detection for cloud metadata
+
+receivers:
+  hostmetrics:
+    collection_interval: 30s
+    scrapers:
+      # CPU metrics
+      cpu:
+        metrics:
+          system.cpu.utilization:
+            enabled: true
+          system.cpu.time:
+            enabled: true
+
+      # Memory metrics
+      memory:
+        metrics:
+          system.memory.usage:
+            enabled: true
+          system.memory.utilization:
+            enabled: true
+
+      # Disk I/O metrics
+      disk:
+        metrics:
+          system.disk.io:
+            enabled: true
+          system.disk.io_time:
+            enabled: true
+          system.disk.operations:
+            enabled: true
+          system.disk.operation_time:
+            enabled: true
+
+      # Filesystem metrics
+      filesystem:
+        metrics:
+          system.filesystem.usage:
+            enabled: true
+          system.filesystem.utilization:
+            enabled: true
+        # Exclude virtual filesystems
+        exclude_mount_points:
+          mount_points:
+            - /proc/*
+            - /sys/*
+            - /dev/*
+            - /run/*
+          match_type: regexp
+
+      # Network metrics
+      network:
+        metrics:
+          system.network.io:
+            enabled: true
+          system.network.packets:
+            enabled: true
+          system.network.errors:
+            enabled: true
+          system.network.dropped:
+            enabled: true
+        # Exclude loopback and virtual interfaces
+        exclude:
+          interfaces:
+            - lo
+            - veth*
+            - docker*
+            - br-*
+          match_type: regexp
+
+      # Load average (Linux/macOS only)
+      load:
+        metrics:
+          system.cpu.load_average.1m:
+            enabled: true
+          system.cpu.load_average.5m:
+            enabled: true
+          system.cpu.load_average.15m:
+            enabled: true
+
+      # Process metrics (optional - can be resource intensive)
+      # processes:
+      #   metrics:
+      #     system.processes.count:
+      #       enabled: true
+      #     system.processes.created:
+      #       enabled: true
+
+processors:
+  # Add resource attributes
+  resource:
+    attributes:
+      - key: service.name
+        value: "host-metrics"
+        action: upsert
+
+  # Batch metrics for efficiency
+  batch:
+    send_batch_size: 1000
+    timeout: 10s
+
+  # Memory limiter to prevent OOM
+  memory_limiter:
+    check_interval: 5s
+    limit_mib: 400
+    spike_limit_mib: 100
+
+exporters:
+  otlp:
+    endpoint: "https://logfire-ingest.pydantic.dev"
+    headers:
+      Authorization: "Bearer ${env:LOGFIRE_TOKEN}"
+
+  # Debug exporter (uncomment for troubleshooting)
+  # debug:
+  #   verbosity: detailed
+
+service:
+  pipelines:
+    metrics:
+      receivers: [hostmetrics]
+      processors: [memory_limiter, resource, batch]
+      exporters: [otlp]
+
+  # Telemetry for the collector itself
+  telemetry:
+    logs:
+      level: info
+    metrics:
+      level: detailed
+      address: 0.0.0.0:8888

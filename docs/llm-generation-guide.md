@@ -214,9 +214,9 @@ FROM records
 After LLM generates a dashboard:
 
 1. **YAML Parse** - Ensure valid YAML syntax
-2. **Schema Check** - Validate against Perses schema with `percli lint`
+2. **Schema Check** - Validate against Perses schema with `percli lint` (if installed)
 3. **Query Check** - Manually review SQL queries for correctness
-4. **Push to Logfire** - `logfire-cli dashboards push dashboard.yaml`
+4. **Import to Logfire** - `logfire-cli dashboards import dashboard.yaml`
 5. **Visual Check** - Verify panels render correctly in Logfire UI
 
 ## Example: Full Generation Prompt
@@ -268,4 +268,5 @@ Return the complete dashboard YAML with proper layout.
 2. **Show Examples** - Include working query examples
 3. **Specify Format** - Request specific panel types and layouts
 4. **Iterate** - Review output and ask for corrections
-5. **Validate** - Always validate with `logfire-cli lint` before pushing
+5. **Validate** - Validate YAML syntax and structure before pushing (use
+   `percli lint` if available)

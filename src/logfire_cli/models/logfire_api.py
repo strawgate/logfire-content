@@ -101,10 +101,12 @@ class ListDashboards(PreconfiguredRootModel):
 
     root: list[ListDashboardItem]
 
+
 class GetDashboardResponse(PreconfiguredBaseModel):
     """API response wrapper for a single dashboard."""
 
     dashboard: Dashboard = Field(..., description='Dashboard definition')
+
 
 class DashboardResponse(PreconfiguredBaseModel):
     """API response wrapper for a single dashboard.

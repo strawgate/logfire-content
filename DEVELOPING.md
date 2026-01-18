@@ -15,23 +15,23 @@ make sync
 
 ## Development Commands
 
-| Command | Purpose |
-|---------|---------|
-| `make ci` | Run all CI checks (lint, typecheck, test) |
-| `make check` | Alias for `make ci` |
-| `make lint-check` | Check code with ruff |
-| `make lint-fix` | Auto-fix linting issues |
-| `make format` | Format code with ruff |
-| `make typecheck` | Run basedpyright type checking |
-| `make test` | Run tests with pytest |
-| `make test-coverage` | Run tests with coverage report |
-| `make docs` | Build documentation |
-| `make docs-serve` | Serve documentation locally |
-| `make sync` | Sync all dependencies |
+|Command|Purpose|
+|---|---|
+|`make ci`|Run all CI checks (lint, typecheck, test)|
+|`make check`|Alias for `make ci`|
+|`make lint-check`|Check code with ruff|
+|`make lint-fix`|Auto-fix linting issues|
+|`make format`|Format code with ruff|
+|`make typecheck`|Run basedpyright type checking|
+|`make test`|Run tests with pytest|
+|`make test-coverage`|Run tests with coverage report|
+|`make docs`|Build documentation|
+|`make docs-serve`|Serve documentation locally|
+|`make sync`|Sync all dependencies|
 
 ## Project Structure
 
-```
+```text
 logfire-content/
 ├── src/logfire_cli/        # CLI source code
 │   ├── cli.py              # Click commands
@@ -56,7 +56,7 @@ logfire-content/
 
 ### CLI Structure
 
-```
+```text
 src/logfire_cli/
 ├── __init__.py           # Package exports
 ├── cli.py                # Click-based CLI commands
@@ -72,7 +72,7 @@ src/logfire_cli/
 
 ### Content Structure
 
-```
+```text
 integrations/
 ├── host-metrics/
 │   ├── README.md           # Integration documentation
@@ -114,17 +114,23 @@ The `LogfireClient` provides the following methods:
 
 - `list_dashboards() -> ListDashboards` - List all dashboards
 - `get_dashboard(slug: str) -> Dashboard` - Get a dashboard by slug
-- `create_dashboard(slug: str, dashboard: Dashboard) -> Dashboard` - Create a new dashboard (POST)
-- `update_dashboard(slug: str, dashboard: Dashboard) -> Dashboard` - Update an existing dashboard (PUT)
+- `create_dashboard(slug: str, dashboard: Dashboard) -> Dashboard` - Create a
+  new dashboard (POST)
+- `update_dashboard(slug: str, dashboard: Dashboard) -> Dashboard` - Update an
+  existing dashboard (PUT)
 - `delete_dashboard(slug: str) -> None` - Delete a dashboard
 
-All methods use strongly-typed Pydantic models (`Dashboard`, `ListDashboards`, etc.) instead of raw dictionaries.
+All methods use strongly-typed Pydantic models (`Dashboard`, `ListDashboards`,
+etc.) instead of raw dictionaries.
 
 ### API URL Format
 
-**Important**: All API endpoints require trailing slashes. URLs should be formatted as:
+**Important**: All API endpoints require trailing slashes. URLs should be
+formatted as:
+
 - `/ui-api/organizations/{org}/projects/{project}/dashboards/` (list)
-- `/ui-api/organizations/{org}/projects/{project}/dashboards/{slug}/` (get/update/delete)
+- `/ui-api/organizations/{org}/projects/{project}/dashboards/{slug}/`
+  (get/update/delete)
 
 The client automatically appends trailing slashes to all endpoint URLs.
 
@@ -152,7 +158,7 @@ make test-coverage     # With coverage report
 2. Add `README.md` with setup instructions
 3. Add `overview.yaml` with Perses dashboard
 4. Add `collector.yaml` with OTel Collector config (if applicable)
-5. Run `logfire-cli lint integrations/<technology>/overview.yaml`
+5. Validate YAML syntax and structure (use `percli lint` if available)
 
 ## Verification Checklist
 
@@ -160,7 +166,8 @@ Before committing changes:
 
 1. Run `make ci` - all checks must pass
 2. For CLI changes: test with actual Logfire instance if possible
-3. For dashboard content: validate with `logfire-cli dashboards lint` (or `logfire-cli lint`)
+3. For dashboard content: validate YAML syntax and structure (use `percli lint`
+   if available)
 4. Update documentation if adding new features
 5. Ensure all API endpoints use trailing slashes (`/dashboards/`, not `/dashboards`)
 

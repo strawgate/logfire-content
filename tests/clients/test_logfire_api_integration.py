@@ -28,7 +28,7 @@ import os
 from collections.abc import AsyncGenerator
 from datetime import datetime
 from typing import Any
-from uuid import UUID
+from uuid import UUID, uuid4
 
 import pytest
 from dirty_equals import IsStr
@@ -116,7 +116,7 @@ async def test_crud_dashboard(
 ) -> None:
     """Test creating, updating, and deleting a dashboard."""
 
-    slug = 'test-create-simple-dashboard'
+    slug = 'test-create-simple-dashboard-' + str(uuid4())
 
     with contextlib.suppress(LogfireNotFoundError):
         _ = await client.get_dashboard(slug)

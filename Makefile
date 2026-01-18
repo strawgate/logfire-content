@@ -1,7 +1,7 @@
 # Makefile for logfire-cli development
 # =============================================================================
 
-.PHONY: help install install-dev sync lint lint-check lint-fix format typecheck test test-coverage test-integration test-integration-update ci check docs docs-serve clean build publish
+.PHONY: help install install-dev sync lint lint-check lint-fix format typecheck test test-coverage test-integration test-integration-update ci check docs docs-serve clean build publish markdownlint markdownlint-fix yamlfix yamlfix-check
 
 # Default target
 help:
@@ -19,6 +19,10 @@ help:
 	@echo "  lint-fix         Auto-fix linting issues"
 	@echo "  format           Format code with ruff"
 	@echo "  typecheck        Run type checking with basedpyright"
+	@echo "  markdownlint     Check Markdown files with markdownlint"
+	@echo "  markdownlint-fix Auto-fix Markdown linting issues"
+	@echo "  yamlfix          Format YAML files with yamlfix"
+	@echo "  yamlfix-check    Check YAML files without modifying"
 	@echo ""
 	@echo "Testing:"
 	@echo "  test             Run tests"
@@ -27,7 +31,7 @@ help:
 	@echo "  test-integration-update Update integration test snapshots"
 	@echo ""
 	@echo "CI/CD:"
-	@echo "  ci               Run all CI checks (lint, typecheck, test)"
+	@echo "  ci               Run all CI checks (lint, typecheck, markdownlint, yamlfix, test)"
 	@echo "  check            Alias for ci"
 	@echo ""
 	@echo "Documentation:"
@@ -70,7 +74,24 @@ format:
 	uv run ruff format src tests
 
 typecheck:
-	uv run basedpyright
+	@echo "Running type checking..."
+	@uv run basedpyright --outputjson > /tmp/pyright.json 2>&1 || true
+	@uv run basedpyright || true
+	@python3 -c "import json, sys; data = json.load(open('/tmp/pyright.json')); errors = [d for d in data.get('generalDiagnostics', []) if d.get('severity') == 'error']; warnings = [d for d in data.get('generalDiagnostics', []) if d.get('severity') == 'warning']; print(f'\nType checking: {len(warnings)} warnings, {len(errors)} errors'); sys.exit(1 if (errors or warnings) else 0)" || exit 1
+
+markdownlint:
+	@command -v markdownlint >/dev/null 2>&1 || { echo "Error: markdownlint not found. Install with: npm install -g markdownlint-cli"; exit 1; }
+	markdownlint "**/*.md" --ignore node_modules
+
+markdownlint-fix:
+	@command -v markdownlint >/dev/null 2>&1 || { echo "Error: markdownlint not found. Install with: npm install -g markdownlint-cli"; exit 1; }
+	markdownlint "**/*.md" --fix --ignore node_modules
+
+yamlfix:
+	@find . -name "*.yaml" -o -name "*.yml" | grep -v node_modules | grep -v ".venv" | grep -v ".pytest_cache" | xargs uv run yamlfix
+
+yamlfix-check:
+	@find . -name "*.yaml" -o -name "*.yml" | grep -v node_modules | grep -v ".venv" | grep -v ".pytest_cache" | grep -v ".github/workflows" | xargs uv run yamlfix --check
 
 # =============================================================================
 # Testing
@@ -92,7 +113,7 @@ test-integration-update:
 # CI/CD
 # =============================================================================
 
-ci: lint-check typecheck test
+ci: lint-check typecheck markdownlint yamlfix-check test
 	@echo ""
 	@echo "All CI checks passed!"
 

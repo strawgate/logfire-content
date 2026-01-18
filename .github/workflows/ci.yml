@@ -2,9 +2,9 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, master]
   pull_request:
-    branches: [main]
+    branches: [main, master]
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -17,8 +17,15 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/setup-python-env
+      - name: Install markdownlint-cli
+        run: |
+          npm install -g markdownlint-cli
       - name: Run linting
         run: make lint-check
+      - name: Run markdownlint
+        run: make markdownlint
+      - name: Run yamlfix check
+        run: make yamlfix-check
 
   typecheck:
     name: Type Check
@@ -54,8 +61,7 @@ jobs:
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v4
         with:
-          fail_ci_if_error: false
-        continue-on-error: true
+          fail_ci_if_error: true
 
   docs:
     name: Build Docs
@@ -75,12 +81,12 @@ jobs:
     if: always()
     steps:
       - name: Check all jobs passed
-        run: |
+        run: |-
           if [[ "${{ needs.lint.result }}" != "success" ]] || \
              [[ "${{ needs.typecheck.result }}" != "success" ]] || \
              [[ "${{ needs.test.result }}" != "success" ]] || \
              [[ "${{ needs.docs.result }}" != "success" ]]; then
-            echo "One or more checks failed"
+            echo "❌ One or more checks failed"
             exit 1
           fi
-          echo "All checks passed!"
+          echo "✅ All checks passed!"

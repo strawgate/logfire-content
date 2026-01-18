@@ -59,6 +59,7 @@ dev = [
     "aioresponses>=0.7",
     "inline-snapshot>=0.19",
     "dirty-equals>=0.8",
+    "yamlfix>=1.0",
 ]
 docs = [
     "mkdocs>=1.6",
@@ -182,7 +183,7 @@ reportExplicitAny = false
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
-addopts = "-vv --inline-snapshot=create,fix"
+addopts = "-vv"
 testpaths = ["tests"]
 markers = [
     "integration: marks tests as integration tests (requires real API credentials)",

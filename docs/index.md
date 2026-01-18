@@ -35,13 +35,13 @@ logfire-cli dashboards list
 ```bash
 logfire-cli dashboards init "My Dashboard"
 # Edit my-dashboard.yaml
-logfire-cli dashboards push my-dashboard.yaml
+logfire-cli dashboards import my-dashboard.yaml
 ```
 
-### Pull an Existing Dashboard
+### Export an Existing Dashboard
 
 ```bash
-logfire-cli dashboards pull my-dashboard -o my-dashboard.yaml
+logfire-cli dashboards export my-dashboard -o my-dashboard.yaml
 ```
 
 ## Documentation
@@ -55,7 +55,8 @@ logfire-cli dashboards pull my-dashboard -o my-dashboard.yaml
 
 Pre-built dashboards for common technologies:
 
-- [Host Metrics](../integrations/host-metrics/README.md) - System CPU, memory, disk, network
+- [Host Metrics](../integrations/host-metrics/README.md) - System CPU, memory,
+  disk, network
 
 ## Contributing
 

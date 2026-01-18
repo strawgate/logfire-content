@@ -1,0 +1,1 @@
+"""Logfire API client module."""

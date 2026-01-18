@@ -5,12 +5,12 @@ This module provides the main CLI commands for managing Logfire dashboards.
 
 import asyncio
 import os
-import subprocess
 import sys
 from collections.abc import Callable
 from pathlib import Path
 
 import rich_click as click
+import yaml
 from pydantic import BaseModel
 from rich.table import Table
 
@@ -24,9 +24,8 @@ from logfire_cli.clients.logfire_api import (
 from logfire_cli.models.logfire_api import Dashboard, ListDashboards
 from logfire_cli.utilities.console import (
     get_console,
-    get_error_console,
-    print_error,
     print_console,
+    print_error,
     print_success,
     print_table,
     print_warning,
@@ -195,7 +194,7 @@ async def _async_list_dashboards(ctx: click.Context) -> None:
     _print_dashboards(dashboards=dashboards)
 
 
-@dashboards_group.command('pull')
+@dashboards_group.command('export')
 @click.argument('slug')
 @click.option(
     '--output',
@@ -205,7 +204,7 @@ async def _async_list_dashboards(ctx: click.Context) -> None:
 )
 @click.pass_context
 @handle_errors
-def pull(ctx: click.Context, slug: str, output: Path | None) -> None:
+def export(ctx: click.Context, slug: str, output: Path | None) -> None:
     """Export a dashboard to a Perses YAML file.
 
     SLUG is the dashboard identifier to export.
@@ -213,14 +212,12 @@ def pull(ctx: click.Context, slug: str, output: Path | None) -> None:
     if output is None:
         output = Path(f'{slug}.yaml')
 
-    asyncio.run(_async_pull(ctx=ctx, slug=slug, output=output))
+    asyncio.run(_async_export(ctx=ctx, slug=slug, output=output))
     get_console().print(f'[green]Dashboard exported to:[/green] {output}')
 
 
-async def _async_pull(ctx: click.Context, slug: str, output: Path) -> None:
-    """Async implementation of pull command."""
-    import yaml
-
+async def _async_export(ctx: click.Context, slug: str, output: Path) -> None:
+    """Async implementation of export command."""
     async with _get_client_from_context(ctx) as client:
         dashboard: Dashboard = await client.get_dashboard(slug)
 
@@ -231,7 +228,7 @@ async def _async_pull(ctx: click.Context, slug: str, output: Path) -> None:
         yaml.dump(dashboard_dict, f, default_flow_style=False, sort_keys=False, allow_unicode=True)
 
 
-@dashboards_group.command('push')
+@dashboards_group.command('import')
 @click.argument('file', type=click.Path(exists=True, path_type=Path))
 @click.option(
     '--slug',
@@ -240,24 +237,24 @@ async def _async_pull(ctx: click.Context, slug: str, output: Path) -> None:
 )
 @click.pass_context
 @handle_errors
-def push(ctx: click.Context, file: Path, slug: str | None) -> None:
+def import_cmd(ctx: click.Context, file: Path, slug: str | None) -> None:
     """Import a Perses YAML dashboard to Logfire.
 
     FILE is the path to the YAML dashboard file.
     """
-    dashboard_slug = asyncio.run(_async_push(ctx=ctx, file=file, slug=slug))
-    get_console().print(f'[green]Dashboard pushed successfully:[/green] {dashboard_slug}')
+    dashboard_slug = asyncio.run(_async_import(ctx=ctx, file=file, slug=slug))
+    get_console().print(f'[green]Dashboard imported successfully:[/green] {dashboard_slug}')
 
 
-async def _async_push(ctx: click.Context, file: Path, slug: str | None) -> str:
-    """Async implementation of push command."""
+async def _async_import(ctx: click.Context, file: Path, slug: str | None) -> str:
+    """Async implementation of import command."""
     dashboard = load_model_from_yaml(path=file, model=Dashboard)
 
     # Determine slug: use provided slug, or derive from metadata.name
     if slug is None:
         slug = dashboard.metadata.name
 
-    # Push dashboard (create or update)
+    # Import dashboard (create or update)
     async with _get_client_from_context(ctx) as client:
         _ = await client.update_dashboard(slug, dashboard)
 
@@ -356,12 +353,14 @@ def init(name: str, output: Path | None) -> None:
                                     'plugin': {
                                         'kind': 'LogfireTimeSeriesQuery',
                                         'spec': {
-                                            'query': 'SELECT\n'
-                                            '  time_bucket($resolution, start_timestamp) AS x,\n'
-                                            '  count(1) as y\n'
-                                            'FROM records\n'
-                                            'GROUP BY x\n'
-                                            'ORDER BY x',
+                                            'query': (
+                                                'SELECT\n'
+                                                '  time_bucket($resolution, start_timestamp) AS x,\n'
+                                                '  count(1) as y\n'
+                                                'FROM records\n'
+                                                'GROUP BY x\n'
+                                                'ORDER BY x'
+                                            ),
                                         },
                                     },
                                 },
@@ -396,7 +395,7 @@ def init(name: str, output: Path | None) -> None:
     dump_model_to_yaml_file(model=Dashboard.model_validate(template), path=output)
 
     print_success(message='Dashboard template created', extra_message=str(output))
-    print_console(message='Edit the file and use "logfire-cli dashboards push" to upload it.')
+    print_console(message='Edit the file and use "logfire-cli dashboards import" to upload it.')
 
 
 if __name__ == '__main__':

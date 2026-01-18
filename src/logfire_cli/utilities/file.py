@@ -14,7 +14,7 @@ def load_dict_from_yaml(path: Path) -> dict[str, Any]:
     Returns:
         The loaded dictionary.
     """
-    with path.open() as f:
+    with path.open(encoding='utf-8') as f:
         loaded: Any = yaml.safe_load(f)  # pyright: ignore[reportAny]
 
     if not isinstance(loaded, dict):
@@ -45,14 +45,23 @@ def load_model_from_yaml[T: BaseModel](path: Path, model: type[T]) -> T:
     loaded = load_dict_from_yaml(path)
     return model.model_validate(loaded)
 
+
 def dump_model_to_yaml(model: BaseModel) -> str:
-    """Dump a model to a YAML file.
+    """Dump a model to a YAML string.
 
     Args:
         model: Model to dump.
-        path: Path to the YAML file.
+
+    Returns:
+        YAML string representation of the model.
     """
-    return yaml.dump(model.model_dump(mode='json', by_alias=True, exclude_none=True), default_flow_style=False, sort_keys=False, allow_unicode=True)
+    return yaml.dump(
+        model.model_dump(mode='json', by_alias=True, exclude_none=True),
+        default_flow_style=False,
+        sort_keys=False,
+        allow_unicode=True,
+    )
+
 
 def dump_model_to_yaml_file(model: BaseModel, path: Path) -> None:
     """Dump a model to a YAML file.
@@ -61,5 +70,5 @@ def dump_model_to_yaml_file(model: BaseModel, path: Path) -> None:
         model: Model to dump.
         path: Path to the YAML file.
     """
-    with path.open('w') as f:
+    with path.open('w', encoding='utf-8') as f:
         _ = f.write(dump_model_to_yaml(model=model))

@@ -5,6 +5,7 @@ from typing import Any
 from uuid import uuid4
 
 import pytest
+import yaml
 from aioresponses import aioresponses
 from click.testing import CliRunner
 
@@ -88,10 +89,8 @@ class TestCLI:
             assert result.exit_code == 0
             assert 'No dashboards found' in result.output
 
-    def test_pull(self, runner: CliRunner, env_vars: dict[str, str], sample_dashboard: dict[str, Any], tmp_path: Path) -> None:
-        """Test pulling a dashboard to a file."""
-        from uuid import uuid4
-
+    def test_export(self, runner: CliRunner, env_vars: dict[str, str], sample_dashboard: dict[str, Any], tmp_path: Path) -> None:
+        """Test exporting a dashboard to a file."""
         wrapped_response = {
             'id': str(uuid4()),
             'project_id': str(uuid4()),
@@ -110,23 +109,18 @@ class TestCLI:
             )
 
             output_file = tmp_path / 'output.yaml'
-            result = runner.invoke(cli, ['dashboards', 'pull', 'test-dashboard', '-o', str(output_file)], env=env_vars)
+            result = runner.invoke(cli, ['dashboards', 'export', 'test-dashboard', '-o', str(output_file)], env=env_vars)
             assert result.exit_code == 0
             assert output_file.exists()
 
             # Verify file contents
-            import yaml
-
             with output_file.open() as f:
                 content: dict[str, Any] = yaml.safe_load(f)  # pyright: ignore[reportAny]
                 assert content['kind'] == 'Dashboard'
                 assert content['metadata']['name'] == 'test-dashboard'
 
-    def test_push(self, runner: CliRunner, env_vars: dict[str, str], temp_yaml_file: Path) -> None:
-        """Test pushing a dashboard from a file."""
-        import yaml
-        from uuid import uuid4
-
+    def test_import(self, runner: CliRunner, env_vars: dict[str, str], temp_yaml_file: Path) -> None:
+        """Test importing a dashboard from a file."""
         # Read the dashboard to get the expected response structure
         with temp_yaml_file.open() as f:
             dashboard_data: dict[str, Any] = yaml.safe_load(f)  # pyright: ignore[reportAny]
@@ -148,14 +142,12 @@ class TestCLI:
                 payload=wrapped_response,
             )
 
-            result = runner.invoke(cli, ['dashboards', 'push', str(temp_yaml_file)], env=env_vars)
+            result = runner.invoke(cli, ['dashboards', 'import', str(temp_yaml_file)], env=env_vars)
             assert result.exit_code == 0
-            assert 'pushed successfully' in result.output.lower()
+            assert 'imported successfully' in result.output.lower()
 
     def test_get(self, runner: CliRunner, env_vars: dict[str, str], sample_dashboard: dict[str, Any]) -> None:
         """Test getting dashboard details."""
-        from uuid import uuid4
-
         wrapped_response = {
             'id': str(uuid4()),
             'project_id': str(uuid4()),
@@ -198,21 +190,6 @@ class TestCLI:
             result = runner.invoke(cli, ['dashboards', 'init', 'My New Dashboard'])
             assert result.exit_code == 0
             assert Path('my-new-dashboard.yaml').exists()
-
-    def test_lint_valid(self, runner: CliRunner, temp_yaml_file: Path) -> None:
-        """Test linting a valid dashboard file."""
-        result = runner.invoke(cli, ['lint', str(temp_yaml_file)])
-        assert result.exit_code == 0
-        assert 'Valid' in result.output
-
-    def test_lint_invalid(self, runner: CliRunner, tmp_path: Path) -> None:
-        """Test linting an invalid dashboard file."""
-        bad_file = tmp_path / 'bad.yaml'
-        _ = bad_file.write_text('not: a dashboard')
-
-        result = runner.invoke(cli, ['lint', str(bad_file)])
-        assert result.exit_code == 1
-        assert 'Validation failed' in result.output
 
     def test_missing_token(self, runner: CliRunner) -> None:
         """Test error when token is missing."""

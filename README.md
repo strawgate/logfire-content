@@ -1,13 +1,15 @@
 # Logfire Content
 
-CLI and content packs for managing [Pydantic Logfire](https://logfire.pydantic.dev/) dashboards.
+CLI and content packs for managing
+[Pydantic Logfire](https://logfire.pydantic.dev/) dashboards.
 
 ## Overview
 
 This repository provides:
 
 1. **logfire-cli**: A command-line tool for managing Logfire dashboards
-2. **Integrations**: Pre-built [Perses](https://perses.dev/) dashboards for common infrastructure
+2. **Integrations**: Pre-built [Perses](https://perses.dev/) dashboards for
+   common infrastructure
 3. **Documentation**: Query references and guides for building dashboards
 
 ## Installation
@@ -42,59 +44,52 @@ Note: All commands are under the `dashboards` subcommand group.
 # Create from template
 logfire-cli dashboards init "My Dashboard"
 
-# Edit my-dashboard.yaml, then push
-logfire-cli dashboards push my-dashboard.yaml
+# Edit my-dashboard.yaml, then import
+logfire-cli dashboards import my-dashboard.yaml
 ```
 
-### Pull and Modify
+### Export and Modify
 
 ```bash
 # Export existing dashboard
-logfire-cli dashboards pull my-dashboard -o my-dashboard.yaml
+logfire-cli dashboards export my-dashboard -o my-dashboard.yaml
 
-# Edit and push back
-logfire-cli dashboards push my-dashboard.yaml
-```
-
-### Validate Dashboards
-
-```bash
-logfire-cli lint my-dashboard.yaml
-# or
-logfire-cli dashboards lint my-dashboard.yaml
+# Edit and import back
+logfire-cli dashboards import my-dashboard.yaml
 ```
 
 ## CLI Commands
 
-| Command | Description |
-|---------|-------------|
-| `logfire-cli dashboards list` | List all dashboards |
-| `logfire-cli dashboards pull <slug>` | Export dashboard to YAML |
-| `logfire-cli dashboards push <file>` | Import YAML to Logfire (creates or updates) |
-| `logfire-cli dashboards get <slug>` | Print dashboard YAML |
-| `logfire-cli dashboards delete <slug>` | Delete a dashboard |
-| `logfire-cli dashboards init <name>` | Create dashboard template |
-| `logfire-cli lint <files>` | Validate YAML files |
+|Command|Description|
+|---|---|
+|`logfire-cli dashboards list`|List all dashboards|
+|`logfire-cli dashboards export <slug>`|Export dashboard to YAML|
+|`logfire-cli dashboards import <file>`|Import YAML to Logfire (creates or updates)|
+|`logfire-cli dashboards get <slug>`|Print dashboard YAML|
+|`logfire-cli dashboards delete <slug>`|Delete a dashboard|
+|`logfire-cli dashboards init <name>`|Create dashboard template|
 
-All dashboard operations use strongly-typed Pydantic models for type safety and validation.
+All dashboard operations use strongly-typed Pydantic models for type safety
+and validation.
 
 ## Integrations
 
 Pre-built dashboards for common technologies:
 
-| Integration | Description |
-|-------------|-------------|
-| [host-metrics](integrations/host-metrics/) | System CPU, memory, disk, network |
+|Integration|Description|
+|---|---|
+|[host-metrics](integrations/host-metrics/)|System CPU, memory, disk, network|
 
 ### Deploy an Integration
 
 ```bash
-logfire-cli dashboards push integrations/host-metrics/overview.yaml
+logfire-cli dashboards import integrations/host-metrics/overview.yaml
 ```
 
 ## Dashboard Format
 
-Dashboards use the [Perses](https://perses.dev/) YAML format with Logfire-specific query plugins:
+Dashboards use the [Perses](https://perses.dev/) YAML format with
+Logfire-specific query plugins:
 
 ```yaml
 kind: Dashboard

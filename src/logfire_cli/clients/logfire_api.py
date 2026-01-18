@@ -274,67 +274,6 @@ class LogfireClient:
         url = self._build_ui_api_url('dashboards', slug) + '/'
         return await self._delete(url)
 
-    # async def pull(self, slug: str, output_path: Path) -> None:
-    #     """Export a dashboard to a YAML file.
-
-    #     Args:
-    #         slug: The dashboard slug to export.
-    #         output_path: Path to write the YAML file.
-
-    #     Raises:
-    #         LogfireNotFoundError: If the dashboard doesn't exist.
-    #         LogfireClientError: If the request fails.
-    #     """
-    #     definition = await self._get(
-    #         self._build_url(
-    #             self._ui_api_project_path(),
-    #             'dashboards',
-    #             slug,
-    #         ),
-    #     )
-    #     with output_path.open('w') as f:
-    #         yaml.dump(definition, f, default_flow_style=False, sort_keys=False, allow_unicode=True)
-
-    # async def push(self, yaml_path: Path, slug: str | None = None) -> dict[str, Any]:
-    #     """Import a dashboard from a YAML file.
-
-    #     Args:
-    #         yaml_path: Path to the YAML file.
-    #         slug: Optional slug override. If not provided, derived from metadata.name.
-
-    #     Returns:
-    #         The API response.
-
-    #     Raises:
-    #         LogfireClientError: If the request fails.
-    #         TypeError: If the YAML is not a dictionary.
-    #         ValueError: If the YAML is missing required fields.
-    #     """
-    #     with yaml_path.open() as f:
-    #         definition = yaml.safe_load(f)
-
-    #     if not isinstance(definition, dict):
-    #         msg = 'Invalid dashboard YAML: expected a dictionary'
-    #         raise TypeError(msg)
-
-    #     # Derive slug from metadata.name if not provided
-    #     if slug is None:
-    #         metadata = definition.get('metadata', {})
-    #         name = metadata.get('name')
-    #         if not name:
-    #             msg = 'Dashboard must have metadata.name or provide explicit slug'
-    #             raise ValueError(msg)
-    #         derived_slug: str = name.lower().replace(' ', '-').replace('_', '-')
-    #         return await self.put_dashboard(derived_slug, definition)
-
-    #     return await self.put_dashboard(slug, definition)
-
-    # async def close(self) -> None:
-    #     """Close the aiohttp session."""
-    #     if self._session is not None and not self._session.closed:
-    #         await self._session.close()
-    #         self._session = None
-
     async def __aenter__(self) -> 'LogfireClient':
         """Enter async context manager."""
         self._session = aiohttp.ClientSession(

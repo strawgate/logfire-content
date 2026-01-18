@@ -29,8 +29,10 @@ Usage:
 
 import os
 from pathlib import Path
+from typing import Any
 
 import pytest
+import yaml
 from click.testing import CliRunner
 from inline_snapshot import snapshot
 
@@ -112,25 +114,21 @@ class TestIntegration:
             assert Path('integration-test-dashboard.yaml').exists()
 
             # Check file contents
-            import yaml
-
             with Path('integration-test-dashboard.yaml').open() as f:
-                content = yaml.safe_load(f)
+                content = yaml.safe_load(f)  # pyright: ignore[reportAny]
                 assert content['kind'] == 'Dashboard'
                 assert content['metadata']['name'] == 'integration-test-dashboard'
                 assert content['spec']['display']['name'] == 'Integration Test Dashboard'
 
-    def test_dashboards_push_and_pull(
+    def test_dashboards_import_and_export(
         self,
         runner: CliRunner,
         skip_if_no_env: dict[str, str],
         tmp_path: Path,
     ) -> None:
-        """Test pushing and pulling a dashboard."""
-        import yaml
-
+        """Test importing and exporting a dashboard."""
         # Create a test dashboard
-        test_dashboard = {
+        test_dashboard: dict[str, Any] = {
             'kind': 'Dashboard',
             'metadata': {
                 'name': 'integration-test-dashboard',
@@ -158,7 +156,10 @@ class TestIntegration:
                                         'plugin': {
                                             'kind': 'LogfireTimeSeriesQuery',
                                             'spec': {
-                                                'query': 'SELECT time_bucket($resolution, start_timestamp) AS x, count(1) as y FROM records GROUP BY x ORDER BY x',
+                                                'query': (
+                                                    'SELECT time_bucket($resolution, start_timestamp) AS x, '
+                                                    'count(1) as y FROM records GROUP BY x ORDER BY x'
+                                                ),
                                             },
                                         },
                                     },
@@ -192,31 +193,31 @@ class TestIntegration:
         with dashboard_file.open('w') as f:
             yaml.dump(test_dashboard, f)
 
-        # Push the dashboard
-        push_result = runner.invoke(
+        # Import the dashboard
+        import_result = runner.invoke(
             cli,
-            ['dashboards', 'push', str(dashboard_file)],
+            ['dashboards', 'import', str(dashboard_file)],
             env=skip_if_no_env,
         )
-        assert push_result.exit_code == 0
-        assert 'pushed successfully' in push_result.output.lower()
+        assert import_result.exit_code == 0
+        assert 'imported successfully' in import_result.output.lower()
 
-        # Pull the dashboard back
-        pulled_file = tmp_path / 'pulled-dashboard.yaml'
-        pull_result = runner.invoke(
+        # Export the dashboard back
+        exported_file = tmp_path / 'exported-dashboard.yaml'
+        export_result = runner.invoke(
             cli,
-            ['dashboards', 'pull', 'integration-test-dashboard', '-o', str(pulled_file)],
+            ['dashboards', 'export', 'integration-test-dashboard', '-o', str(exported_file)],
             env=skip_if_no_env,
         )
-        assert pull_result.exit_code == 0
-        assert pulled_file.exists()
+        assert export_result.exit_code == 0
+        assert exported_file.exists()
 
-        # Verify the pulled dashboard structure
-        with pulled_file.open() as f:
-            pulled_content = yaml.safe_load(f)
-            assert pulled_content['kind'] == 'Dashboard'
-            assert pulled_content['metadata']['name'] == 'integration-test-dashboard'
-            assert pulled_content['spec']['display']['name'] == 'Integration Test Dashboard'
+        # Verify the exported dashboard structure
+        with exported_file.open() as f:
+            exported_content = yaml.safe_load(f)  # pyright: ignore[reportAny]
+            assert exported_content['kind'] == 'Dashboard'
+            assert exported_content['metadata']['name'] == 'integration-test-dashboard'
+            assert exported_content['spec']['display']['name'] == 'Integration Test Dashboard'
 
         # Get the dashboard via get command
         get_result = runner.invoke(
@@ -225,7 +226,7 @@ class TestIntegration:
             env=skip_if_no_env,
         )
         assert get_result.exit_code == 0
-        get_content = yaml.safe_load(get_result.output)
+        get_content = yaml.safe_load(get_result.output)  # pyright: ignore[reportAny]
         assert get_content['kind'] == 'Dashboard'
         assert get_content['metadata']['name'] == 'integration-test-dashboard'
 
@@ -234,12 +235,12 @@ class TestIntegration:
             'kind': get_content['kind'],
             'metadata': {
                 'name': get_content['metadata']['name'],
-                'project': get_content['metadata'].get('project'),
+                'project': get_content['metadata'].get('project'),  # pyright: ignore[reportAny]
             },
             'spec': {
                 'display': get_content['spec']['display'],
-                'panels_count': len(get_content['spec'].get('panels', {})),
-                'layouts_count': len(get_content['spec'].get('layouts', [])),
+                'panels_count': len(get_content['spec'].get('panels', {})),  # pyright: ignore[reportAny]
+                'layouts_count': len(get_content['spec'].get('layouts', [])),  # pyright: ignore[reportAny]
             },
         }
         assert normalized_content == snapshot()
@@ -281,44 +282,8 @@ class TestIntegration:
                     )
                     assert get_result.exit_code == 0
                     # Verify it's valid YAML
-                    import yaml
-
-                    content = yaml.safe_load(get_result.output)
+                    content = yaml.safe_load(get_result.output)  # pyright: ignore[reportAny]
                     assert content['kind'] == 'Dashboard'
                     assert 'metadata' in content
                     assert 'spec' in content
                     break
-
-    def test_lint_valid_dashboard(self, runner: CliRunner, tmp_path: Path) -> None:
-        """Test linting a valid dashboard file."""
-        import yaml
-
-        dashboard_file = tmp_path / 'valid-dashboard.yaml'
-        valid_dashboard = {
-            'kind': 'Dashboard',
-            'metadata': {
-                'name': 'valid-dashboard',
-            },
-            'spec': {
-                'display': {
-                    'name': 'Valid Dashboard',
-                },
-                'panels': {},
-                'layouts': [],
-            },
-        }
-        with dashboard_file.open('w') as f:
-            yaml.dump(valid_dashboard, f)
-
-        result = runner.invoke(cli, ['lint', str(dashboard_file)])
-        assert result.exit_code == 0
-        assert 'Valid' in result.output
-
-    def test_lint_invalid_dashboard(self, runner: CliRunner, tmp_path: Path) -> None:
-        """Test linting an invalid dashboard file."""
-        invalid_file = tmp_path / 'invalid.yaml'
-        invalid_file.write_text('not: a dashboard\ninvalid: structure')
-
-        result = runner.invoke(cli, ['lint', str(invalid_file)])
-        assert result.exit_code != 0
-        assert 'Validation failed' in result.output or 'error' in result.output.lower()

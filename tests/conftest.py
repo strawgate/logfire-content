@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import Any
 
 import pytest
+import yaml
 
 
 @pytest.fixture
@@ -77,8 +78,6 @@ def sample_dashboard() -> dict[str, Any]:
 @pytest.fixture
 def temp_yaml_file(tmp_path: Path, sample_dashboard: dict[str, Any]) -> Path:
     """Create a temporary YAML file with a sample dashboard."""
-    import yaml
-
     file_path = tmp_path / 'test-dashboard.yaml'
     with file_path.open('w') as f:
         yaml.dump(sample_dashboard, f)

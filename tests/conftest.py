@@ -1,17 +1,13 @@
 """Pytest configuration and fixtures for logfire-cli tests."""
 
-from __future__ import annotations
-
-from typing import TYPE_CHECKING
+from pathlib import Path
+from typing import Any
 
 import pytest
 
-if TYPE_CHECKING:
-    from pathlib import Path
-
 
 @pytest.fixture
-def sample_dashboard() -> dict:
+def sample_dashboard() -> dict[str, Any]:
     """Provide a sample dashboard definition for testing."""
     return {
         'kind': 'Dashboard',
@@ -23,6 +19,7 @@ def sample_dashboard() -> dict:
             'display': {
                 'name': 'Test Dashboard',
             },
+            'datasources': {},
             'panels': {
                 'TestPanel': {
                     'kind': 'Panel',
@@ -41,8 +38,12 @@ def sample_dashboard() -> dict:
                                     'plugin': {
                                         'kind': 'LogfireTimeSeriesQuery',
                                         'spec': {
-                                            'query': 'SELECT time_bucket($resolution, start_timestamp) AS x, '
-                                            'count(1) as y FROM records GROUP BY x',
+                                            'query': """
+                                            SELECT time_bucket($resolution, start_timestamp) AS x, count(1) as y
+                                            FROM records
+                                            GROUP BY x
+                                            ORDER BY x
+                                            """
                                         },
                                     },
                                 },
@@ -74,7 +75,7 @@ def sample_dashboard() -> dict:
 
 
 @pytest.fixture
-def temp_yaml_file(tmp_path: Path, sample_dashboard: dict) -> Path:
+def temp_yaml_file(tmp_path: Path, sample_dashboard: dict[str, Any]) -> Path:
     """Create a temporary YAML file with a sample dashboard."""
     import yaml
 

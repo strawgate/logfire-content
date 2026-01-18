@@ -31,12 +31,12 @@ export LOGFIRE_PROJECT="my-project"
 
 ## Commands
 
-### `logfire-cli list`
+### `logfire-cli dashboards list`
 
 List all dashboards in the project.
 
 ```bash
-logfire-cli list
+logfire-cli dashboards list
 ```
 
 **Output:**
@@ -50,12 +50,12 @@ logfire-cli list
 └──────────────────┴─────────────────────┴─────────────────────┘
 ```
 
-### `logfire-cli pull`
+### `logfire-cli dashboards pull`
 
 Export a dashboard to a YAML file.
 
 ```bash
-logfire-cli pull <slug> [-o OUTPUT]
+logfire-cli dashboards pull <slug> [-o OUTPUT]
 ```
 
 **Arguments:**
@@ -74,18 +74,18 @@ logfire-cli pull <slug> [-o OUTPUT]
 
 ```bash
 # Export to default filename
-logfire-cli pull host-metrics
+logfire-cli dashboards pull host-metrics
 
 # Export to specific file
-logfire-cli pull host-metrics -o dashboards/host.yaml
+logfire-cli dashboards pull host-metrics -o dashboards/host.yaml
 ```
 
-### `logfire-cli push`
+### `logfire-cli dashboards push`
 
 Import a YAML dashboard to Logfire.
 
 ```bash
-logfire-cli push <file> [-s SLUG]
+logfire-cli dashboards push <file> [-s SLUG]
 ```
 
 **Arguments:**
@@ -104,18 +104,18 @@ logfire-cli push <file> [-s SLUG]
 
 ```bash
 # Push using name from YAML
-logfire-cli push my-dashboard.yaml
+logfire-cli dashboards push my-dashboard.yaml
 
 # Push with explicit slug
-logfire-cli push my-dashboard.yaml -s custom-slug
+logfire-cli dashboards push my-dashboard.yaml -s custom-slug
 ```
 
-### `logfire-cli get`
+### `logfire-cli dashboards get`
 
 Print dashboard YAML to stdout.
 
 ```bash
-logfire-cli get <slug>
+logfire-cli dashboards get <slug>
 ```
 
 **Arguments:**
@@ -128,21 +128,21 @@ logfire-cli get <slug>
 
 ```bash
 # View dashboard
-logfire-cli get host-metrics
+logfire-cli dashboards get host-metrics
 
 # Pipe to file
-logfire-cli get host-metrics > host-metrics.yaml
+logfire-cli dashboards get host-metrics > host-metrics.yaml
 
 # Pipe to another tool
-logfire-cli get host-metrics | yq '.spec.panels'
+logfire-cli dashboards get host-metrics | yq '.spec.panels'
 ```
 
-### `logfire-cli delete`
+### `logfire-cli dashboards delete`
 
 Delete a dashboard.
 
 ```bash
-logfire-cli delete <slug> [-y]
+logfire-cli dashboards delete <slug> [-y]
 ```
 
 **Arguments:**
@@ -161,10 +161,10 @@ logfire-cli delete <slug> [-y]
 
 ```bash
 # Delete with confirmation
-logfire-cli delete old-dashboard
+logfire-cli dashboards delete old-dashboard
 
 # Delete without confirmation
-logfire-cli delete old-dashboard -y
+logfire-cli dashboards delete old-dashboard -y
 ```
 
 ### `logfire-cli lint`
@@ -205,12 +205,12 @@ logfire-cli lint my-dashboard.yaml --strict
 - If `percli` is installed, uses full Perses schema validation
 - Otherwise, performs basic structure validation
 
-### `logfire-cli init`
+### `logfire-cli dashboards init`
 
 Create a new dashboard template.
 
 ```bash
-logfire-cli init <name> [-o OUTPUT]
+logfire-cli dashboards init <name> [-o OUTPUT]
 ```
 
 **Arguments:**
@@ -229,11 +229,11 @@ logfire-cli init <name> [-o OUTPUT]
 
 ```bash
 # Create template
-logfire-cli init "My New Dashboard"
+logfire-cli dashboards init "My New Dashboard"
 # Creates: my-new-dashboard.yaml
 
 # Specify output path
-logfire-cli init "API Metrics" -o dashboards/api.yaml
+logfire-cli dashboards init "API Metrics" -o dashboards/api.yaml
 ```
 
 ## Exit Codes
@@ -254,7 +254,7 @@ export LOGFIRE_ORGANIZATION="my-org"
 export LOGFIRE_PROJECT="my-project"
 
 # Create new dashboard
-logfire-cli init "API Performance"
+logfire-cli dashboards init "API Performance"
 
 # Edit the template
 vim api-performance.yaml
@@ -263,24 +263,24 @@ vim api-performance.yaml
 logfire-cli lint api-performance.yaml
 
 # Push to Logfire
-logfire-cli push api-performance.yaml
+logfire-cli dashboards push api-performance.yaml
 
 # Verify
-logfire-cli list
+logfire-cli dashboards list
 
 # Make changes in Logfire UI, then pull
-logfire-cli pull api-performance
+logfire-cli dashboards pull api-performance
 
 # Delete when no longer needed
-logfire-cli delete api-performance
+logfire-cli dashboards delete api-performance
 ```
 
 ### Bulk Operations
 
 ```bash
 # Export all dashboards
-for slug in $(logfire-cli list | tail -n +4 | awk '{print $2}'); do
-  logfire-cli pull "$slug" -o "backup/$slug.yaml"
+for slug in $(logfire-cli dashboards list | tail -n +4 | awk '{print $2}'); do
+  logfire-cli dashboards pull "$slug" -o "backup/$slug.yaml"
 done
 
 # Validate all YAML files
@@ -288,7 +288,7 @@ logfire-cli lint integrations/*/*.yaml
 
 # Push all integrations
 for f in integrations/*/overview.yaml; do
-  logfire-cli push "$f"
+  logfire-cli dashboards push "$f"
 done
 ```
 

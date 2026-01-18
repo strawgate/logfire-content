@@ -1,7 +1,7 @@
 # Makefile for logfire-cli development
 # =============================================================================
 
-.PHONY: help install install-dev sync lint lint-check lint-fix format typecheck test test-coverage ci check docs docs-serve clean build publish
+.PHONY: help install install-dev sync lint lint-check lint-fix format typecheck test test-coverage test-integration test-integration-update ci check docs docs-serve clean build publish
 
 # Default target
 help:
@@ -23,6 +23,8 @@ help:
 	@echo "Testing:"
 	@echo "  test             Run tests"
 	@echo "  test-coverage    Run tests with coverage report"
+	@echo "  test-integration Run integration tests (requires LOGFIRE_* env vars)"
+	@echo "  test-integration-update Update integration test snapshots"
 	@echo ""
 	@echo "CI/CD:"
 	@echo "  ci               Run all CI checks (lint, typecheck, test)"
@@ -42,13 +44,13 @@ help:
 # =============================================================================
 
 install:
-	uv sync --no-dev
+	uv sync --no-group dev --no-group docs
 
 install-dev:
-	uv sync --group docs
+	uv sync --group dev --group docs
 
 sync:
-	uv sync --group docs
+	uv sync --group dev --group docs
 
 # =============================================================================
 # Code Quality
@@ -79,6 +81,12 @@ test:
 
 test-coverage:
 	uv run pytest --cov --cov-report=term-missing --cov-report=html
+
+test-integration:
+	uv run pytest -m integration -v tests/test_integration.py tests/test_client_integration.py
+
+test-integration-update:
+	uv run pytest -m integration --inline-snapshot=update tests/test_integration.py tests/test_client_integration.py
 
 # =============================================================================
 # CI/CD

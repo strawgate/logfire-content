@@ -1,0 +1,324 @@
+"""Integration tests for the CLI commands against a real Logfire instance.
+
+These tests require environment variables to be set:
+- LOGFIRE_TOKEN: Your Logfire API token
+- LOGFIRE_ORGANIZATION: Your organization slug
+- LOGFIRE_PROJECT: Your project slug
+
+Tests are automatically skipped if these variables are not set.
+
+Usage:
+    # Set environment variables
+    export LOGFIRE_TOKEN="your-token"
+    export LOGFIRE_ORGANIZATION="your-org"
+    export LOGFIRE_PROJECT="your-project"
+
+    # Run integration tests
+    make test-integration
+    # or
+    pytest -m integration tests/test_integration.py
+
+    # Update snapshots after API changes
+    make test-integration-update
+    # or
+    pytest -m integration --inline-snapshot=update tests/test_integration.py
+
+    # Skip integration tests (useful in CI)
+    pytest -m "not integration"
+"""
+
+import os
+from pathlib import Path
+
+import pytest
+from click.testing import CliRunner
+from inline_snapshot import snapshot
+
+from logfire_cli.cli import cli
+
+
+@pytest.fixture(scope='session')
+def integration_env_vars() -> dict[str, str | None] | None:
+    """Get integration test environment variables.
+
+    Returns:
+        Dictionary of env vars if all required vars are set, None otherwise.
+    """
+    token = os.environ.get('LOGFIRE_TOKEN')
+    organization = os.environ.get('LOGFIRE_ORGANIZATION')
+    project = os.environ.get('LOGFIRE_PROJECT')
+
+    if not all([token, organization, project]):
+        return None
+
+    return {
+        'LOGFIRE_TOKEN': token,
+        'LOGFIRE_ORGANIZATION': organization,
+        'LOGFIRE_PROJECT': project,
+    }
+
+
+@pytest.fixture(scope='session')
+def skip_if_no_env(integration_env_vars: dict[str, str] | None) -> dict[str, str]:
+    """Skip test if integration env vars are not set."""
+    if integration_env_vars is None:
+        pytest.skip('Integration tests require LOGFIRE_TOKEN, LOGFIRE_ORGANIZATION, and LOGFIRE_PROJECT env vars')
+    return integration_env_vars
+
+
+@pytest.fixture
+def runner() -> CliRunner:
+    """Create a CLI runner."""
+    return CliRunner()
+
+
+@pytest.mark.integration
+class TestIntegration:
+    """Integration tests against a real Logfire instance."""
+
+    def test_dashboards_list(self, runner: CliRunner, skip_if_no_env: dict[str, str]) -> None:
+        """Test listing dashboards against real API."""
+        result = runner.invoke(cli, ['dashboards', 'list'], env=skip_if_no_env)
+        assert result.exit_code == 0
+        # Snapshot the output to track changes in dashboard list
+        # Update snapshots with: pytest --inline-snapshot=update tests/test_integration.py
+        assert result.output == snapshot("""\
+                                 Dashboards                                 \n\
+┏━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃ Slug              ┃ Name              ┃ Updated                          ┃
+┡━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┩
+│ my-test-dashboard │ my test dashboard │ 2026-01-18T19:20:25.310030+00:00 │
+└───────────────────┴───────────────────┴──────────────────────────────────┘
+""")
+
+    def test_dashboards_list_empty_output(self, runner: CliRunner, skip_if_no_env: dict[str, str]) -> None:
+        """Test listing dashboards - check output structure."""
+        result = runner.invoke(cli, ['dashboards', 'list'], env=skip_if_no_env)
+        assert result.exit_code == 0
+        # Check that output contains expected structure (table headers)
+        assert 'Slug' in result.output or 'No dashboards found' in result.output
+
+    def test_dashboards_get_nonexistent(self, runner: CliRunner, skip_if_no_env: dict[str, str]) -> None:
+        """Test getting a nonexistent dashboard."""
+        result = runner.invoke(cli, ['dashboards', 'get', 'nonexistent-dashboard-12345'], env=skip_if_no_env)
+        assert result.exit_code != 0
+        assert 'Not found' in result.output or '404' in result.output or 'error' in result.output.lower()
+
+    def test_dashboards_init(self, runner: CliRunner, tmp_path: Path) -> None:
+        """Test creating a dashboard template."""
+        with runner.isolated_filesystem(temp_dir=tmp_path):
+            result = runner.invoke(cli, ['dashboards', 'init', 'Integration Test Dashboard'])
+            assert result.exit_code == 0
+            assert Path('integration-test-dashboard.yaml').exists()
+
+            # Check file contents
+            import yaml
+
+            with Path('integration-test-dashboard.yaml').open() as f:
+                content = yaml.safe_load(f)
+                assert content['kind'] == 'Dashboard'
+                assert content['metadata']['name'] == 'integration-test-dashboard'
+                assert content['spec']['display']['name'] == 'Integration Test Dashboard'
+
+    def test_dashboards_push_and_pull(
+        self,
+        runner: CliRunner,
+        skip_if_no_env: dict[str, str],
+        tmp_path: Path,
+    ) -> None:
+        """Test pushing and pulling a dashboard."""
+        import yaml
+
+        # Create a test dashboard
+        test_dashboard = {
+            'kind': 'Dashboard',
+            'metadata': {
+                'name': 'integration-test-dashboard',
+                'project': skip_if_no_env['LOGFIRE_PROJECT'],
+            },
+            'spec': {
+                'display': {
+                    'name': 'Integration Test Dashboard',
+                },
+                'panels': {
+                    'TestPanel': {
+                        'kind': 'Panel',
+                        'spec': {
+                            'display': {
+                                'name': 'Test Panel',
+                            },
+                            'plugin': {
+                                'kind': 'TimeSeriesChart',
+                                'spec': {},
+                            },
+                            'queries': [
+                                {
+                                    'kind': 'TimeSeriesQuery',
+                                    'spec': {
+                                        'plugin': {
+                                            'kind': 'LogfireTimeSeriesQuery',
+                                            'spec': {
+                                                'query': 'SELECT time_bucket($resolution, start_timestamp) AS x, count(1) as y FROM records GROUP BY x ORDER BY x',
+                                            },
+                                        },
+                                    },
+                                },
+                            ],
+                        },
+                    },
+                },
+                'layouts': [
+                    {
+                        'kind': 'Grid',
+                        'spec': {
+                            'items': [
+                                {
+                                    'x': 0,
+                                    'y': 0,
+                                    'width': 12,
+                                    'height': 6,
+                                    'content': {'$ref': '#/spec/panels/TestPanel'},
+                                },
+                            ],
+                        },
+                    },
+                ],
+                'duration': '1h',
+                'refreshInterval': '0s',
+            },
+        }
+
+        dashboard_file = tmp_path / 'test-dashboard.yaml'
+        with dashboard_file.open('w') as f:
+            yaml.dump(test_dashboard, f)
+
+        # Push the dashboard
+        push_result = runner.invoke(
+            cli,
+            ['dashboards', 'push', str(dashboard_file)],
+            env=skip_if_no_env,
+        )
+        assert push_result.exit_code == 0
+        assert 'pushed successfully' in push_result.output.lower()
+
+        # Pull the dashboard back
+        pulled_file = tmp_path / 'pulled-dashboard.yaml'
+        pull_result = runner.invoke(
+            cli,
+            ['dashboards', 'pull', 'integration-test-dashboard', '-o', str(pulled_file)],
+            env=skip_if_no_env,
+        )
+        assert pull_result.exit_code == 0
+        assert pulled_file.exists()
+
+        # Verify the pulled dashboard structure
+        with pulled_file.open() as f:
+            pulled_content = yaml.safe_load(f)
+            assert pulled_content['kind'] == 'Dashboard'
+            assert pulled_content['metadata']['name'] == 'integration-test-dashboard'
+            assert pulled_content['spec']['display']['name'] == 'Integration Test Dashboard'
+
+        # Get the dashboard via get command
+        get_result = runner.invoke(
+            cli,
+            ['dashboards', 'get', 'integration-test-dashboard'],
+            env=skip_if_no_env,
+        )
+        assert get_result.exit_code == 0
+        get_content = yaml.safe_load(get_result.output)
+        assert get_content['kind'] == 'Dashboard'
+        assert get_content['metadata']['name'] == 'integration-test-dashboard'
+
+        # Snapshot the YAML output structure (normalized)
+        normalized_content = {
+            'kind': get_content['kind'],
+            'metadata': {
+                'name': get_content['metadata']['name'],
+                'project': get_content['metadata'].get('project'),
+            },
+            'spec': {
+                'display': get_content['spec']['display'],
+                'panels_count': len(get_content['spec'].get('panels', {})),
+                'layouts_count': len(get_content['spec'].get('layouts', [])),
+            },
+        }
+        assert normalized_content == snapshot()
+
+        # Clean up: delete the dashboard
+        delete_result = runner.invoke(
+            cli,
+            ['dashboards', 'delete', 'integration-test-dashboard', '-y'],
+            env=skip_if_no_env,
+        )
+        assert delete_result.exit_code == 0
+
+    def test_dashboards_get_existing(self, runner: CliRunner, skip_if_no_env: dict[str, str]) -> None:
+        """Test getting an existing dashboard (if any exist)."""
+        # First, list dashboards to see if any exist
+        list_result = runner.invoke(cli, ['dashboards', 'list'], env=skip_if_no_env)
+        assert list_result.exit_code == 0
+
+        # If there are dashboards, try to get the first one
+        # This is a bit fragile, but we'll extract a slug from the output if possible
+        if 'No dashboards found' not in list_result.output:
+            # Try to find a dashboard slug in the output
+            # The output is a table, so we need to parse it
+            lines = list_result.output.split('\n')
+            # Look for lines that might contain dashboard slugs (non-header, non-empty lines)
+            for line in lines:
+                # Skip empty lines and headers
+                if not line.strip() or 'Slug' in line or '─' in line or '│' not in line:
+                    continue
+                # Try to extract slug (first column in table)
+                parts = [p.strip() for p in line.split('│') if p.strip()]
+                if parts:
+                    slug = parts[0]
+                    # Get this dashboard
+                    get_result = runner.invoke(
+                        cli,
+                        ['dashboards', 'get', slug],
+                        env=skip_if_no_env,
+                    )
+                    assert get_result.exit_code == 0
+                    # Verify it's valid YAML
+                    import yaml
+
+                    content = yaml.safe_load(get_result.output)
+                    assert content['kind'] == 'Dashboard'
+                    assert 'metadata' in content
+                    assert 'spec' in content
+                    break
+
+    def test_lint_valid_dashboard(self, runner: CliRunner, tmp_path: Path) -> None:
+        """Test linting a valid dashboard file."""
+        import yaml
+
+        dashboard_file = tmp_path / 'valid-dashboard.yaml'
+        valid_dashboard = {
+            'kind': 'Dashboard',
+            'metadata': {
+                'name': 'valid-dashboard',
+            },
+            'spec': {
+                'display': {
+                    'name': 'Valid Dashboard',
+                },
+                'panels': {},
+                'layouts': [],
+            },
+        }
+        with dashboard_file.open('w') as f:
+            yaml.dump(valid_dashboard, f)
+
+        result = runner.invoke(cli, ['lint', str(dashboard_file)])
+        assert result.exit_code == 0
+        assert 'Valid' in result.output
+
+    def test_lint_invalid_dashboard(self, runner: CliRunner, tmp_path: Path) -> None:
+        """Test linting an invalid dashboard file."""
+        invalid_file = tmp_path / 'invalid.yaml'
+        invalid_file.write_text('not: a dashboard\ninvalid: structure')
+
+        result = runner.invoke(cli, ['lint', str(invalid_file)])
+        assert result.exit_code != 0
+        assert 'Validation failed' in result.output or 'error' in result.output.lower()

@@ -3,72 +3,74 @@
 This module provides the main CLI commands for managing Logfire dashboards.
 """
 
-from __future__ import annotations
-
 import asyncio
 import os
 import subprocess
 import sys
+from collections.abc import Callable
 from pathlib import Path
-from typing import TYPE_CHECKING
 
 import rich_click as click
-from rich.console import Console
+from pydantic import BaseModel
 from rich.table import Table
 
 from logfire_cli import __version__
-from logfire_cli.client import (
+from logfire_cli.clients.logfire_api import (
     LogfireAuthenticationError,
     LogfireClient,
     LogfireClientError,
     LogfireNotFoundError,
 )
-
-if TYPE_CHECKING:
-    from collections.abc import Callable
+from logfire_cli.models.logfire_api import Dashboard, ListDashboards
+from logfire_cli.utilities.console import (
+    get_console,
+    get_error_console,
+    print_error,
+    print_console,
+    print_success,
+    print_table,
+    print_warning,
+)
+from logfire_cli.utilities.file import dump_model_to_yaml, dump_model_to_yaml_file, load_model_from_yaml
 
 # Configure rich-click styling
 click.rich_click.TEXT_MARKUP = 'rich'
 click.rich_click.SHOW_ARGUMENTS = True
 click.rich_click.GROUP_ARGUMENTS_OPTIONS = True
 
-console = Console()
-error_console = Console(stderr=True)
+
+class CLIContext(BaseModel):
+    """Context for the CLI."""
+
+    token: str | None = None
+    organization: str | None = None
+    project: str | None = None
+    base_url: str = 'https://logfire-us.pydantic.dev'
+
+    def to_client(self) -> LogfireClient:
+        """Convert the context to a Logfire client."""
+        if self.token is None:
+            msg = 'Missing required option: --token or LOGFIRE_TOKEN environment variable'
+            raise click.UsageError(msg)
+        if self.organization is None:
+            msg = 'Missing required option: --organization or LOGFIRE_ORGANIZATION environment variable'
+            raise click.UsageError(msg)
+        if self.project is None:
+            msg = 'Missing required option: --project or LOGFIRE_PROJECT environment variable'
+            raise click.UsageError(msg)
+        return LogfireClient(
+            token=self.token,
+            organization=self.organization,
+            project=self.project,
+            base_url=self.base_url,
+        )
 
 
-def get_client_from_context(ctx: click.Context) -> LogfireClient:
-    """Get the LogfireClient from the click context.
-
-    Args:
-        ctx: Click context with client parameters.
-
-    Returns:
-        Configured LogfireClient instance.
-
-    Raises:
-        click.UsageError: If required authentication parameters are missing.
-    """
-    token = ctx.obj.get('token')
-    organization = ctx.obj.get('organization')
-    project = ctx.obj.get('project')
-    base_url = ctx.obj.get('base_url', 'https://logfire-us.pydantic.dev')
-
-    if not token:
-        msg = 'Missing required option: --token or LOGFIRE_TOKEN environment variable'
+def _get_client_from_context(ctx: click.Context) -> LogfireClient:
+    if not isinstance(ctx.obj, CLIContext):  # pyright: ignore[reportAny]
+        msg = 'Context object is not a CLIContext'
         raise click.UsageError(msg)
-    if not organization:
-        msg = 'Missing required option: --organization or LOGFIRE_ORGANIZATION environment variable'
-        raise click.UsageError(msg)
-    if not project:
-        msg = 'Missing required option: --project or LOGFIRE_PROJECT environment variable'
-        raise click.UsageError(msg)
-
-    return LogfireClient(
-        token=token,
-        organization=organization,
-        project=project,
-        base_url=base_url,
-    )
+    return ctx.obj.to_client()
 
 
 def handle_errors(func: Callable[..., None]) -> Callable[..., None]:
@@ -85,17 +87,16 @@ def handle_errors(func: Callable[..., None]) -> Callable[..., None]:
         try:
             func(*args, **kwargs)
         except LogfireAuthenticationError as e:
-            error_console.print(f'[red]Authentication error:[/red] {e}')
-            error_console.print('[dim]Check your LOGFIRE_TOKEN environment variable.[/dim]')
+            print_error(message='Authentication error', extra_message=str(e), help_message='Check your LOGFIRE_TOKEN environment variable.')
             sys.exit(1)
         except LogfireNotFoundError as e:
-            error_console.print(f'[red]Not found:[/red] {e}')
+            print_error(message='Not found', extra_message=str(e))
             sys.exit(1)
         except LogfireClientError as e:
-            error_console.print(f'[red]Error:[/red] {e}')
+            print_error(message='Error', extra_message=str(e))
             sys.exit(1)
         except FileNotFoundError as e:
-            error_console.print(f'[red]File not found:[/red] {e}')
+            print_error(message='File not found', extra_message=str(e))
             sys.exit(1)
 
     return wrapper
@@ -147,45 +148,54 @@ def cli(
       LOGFIRE_ORGANIZATION  Your organization slug
       LOGFIRE_PROJECT       Your project slug
     """
-    ctx.ensure_object(dict)
-    ctx.obj['token'] = token
-    ctx.obj['organization'] = organization
-    ctx.obj['project'] = project
-    ctx.obj['base_url'] = base_url
+    ctx.obj = CLIContext(
+        token=token,
+        organization=organization,
+        project=project,
+        base_url=base_url,
+    )
 
 
-@cli.command('list')
+@cli.group('dashboards')
+def dashboards_group() -> None:
+    """Manage Logfire dashboards."""
+
+
+@dashboards_group.command('list')
 @click.pass_context
 @handle_errors
 def list_dashboards(ctx: click.Context) -> None:
     """List all dashboards in the project."""
+    asyncio.run(_async_list_dashboards(ctx=ctx))
 
-    async def _list() -> list[dict]:
-        async with get_client_from_context(ctx) as client:
-            return await client.list_dashboards()
 
-    dashboards = asyncio.run(_list())
-
-    if not dashboards:
-        console.print('[yellow]No dashboards found.[/yellow]')
-        return
-
+def _print_dashboards(dashboards: ListDashboards) -> None:
     table = Table(title='Dashboards')
     table.add_column('Slug', style='cyan')
     table.add_column('Name', style='green')
     table.add_column('Updated', style='dim')
 
-    for dashboard in dashboards:
-        table.add_row(
-            dashboard.get('slug', 'N/A'),
-            dashboard.get('name', 'N/A'),
-            dashboard.get('updatedAt', dashboard.get('updated_at', 'N/A')),
-        )
+    for dashboard in dashboards.root:
+        row_slug = dashboard.dashboard_slug
+        row_name = dashboard.dashboard_name
+        row_updated = dashboard.updated_at.isoformat() if dashboard.updated_at else ''
+        table.add_row(row_slug, row_name, row_updated)
 
-    console.print(table)
+    print_table(table=table)
 
 
-@cli.command('pull')
+async def _async_list_dashboards(ctx: click.Context) -> None:
+    async with _get_client_from_context(ctx) as client:
+        dashboards: ListDashboards = await client.list_dashboards()
+
+    if len(dashboards.root) == 0:
+        print_warning(message='No dashboards found.')
+        return
+
+    _print_dashboards(dashboards=dashboards)
+
+
+@dashboards_group.command('pull')
 @click.argument('slug')
 @click.option(
     '--output',
@@ -203,15 +213,25 @@ def pull(ctx: click.Context, slug: str, output: Path | None) -> None:
     if output is None:
         output = Path(f'{slug}.yaml')
 
-    async def _pull() -> None:
-        async with get_client_from_context(ctx) as client:
-            await client.pull(slug, output)
-
-    asyncio.run(_pull())
-    console.print(f'[green]Dashboard exported to:[/green] {output}')
+    asyncio.run(_async_pull(ctx=ctx, slug=slug, output=output))
+    get_console().print(f'[green]Dashboard exported to:[/green] {output}')
 
 
-@cli.command('push')
+async def _async_pull(ctx: click.Context, slug: str, output: Path) -> None:
+    """Async implementation of pull command."""
+    import yaml
+
+    async with _get_client_from_context(ctx) as client:
+        dashboard: Dashboard = await client.get_dashboard(slug)
+
+    # Convert Dashboard model to dict for YAML serialization
+    dashboard_dict = dashboard.model_dump(mode='json', exclude_none=True, by_alias=True)
+
+    with output.open('w') as f:
+        yaml.dump(dashboard_dict, f, default_flow_style=False, sort_keys=False, allow_unicode=True)
+
+
+@dashboards_group.command('push')
 @click.argument('file', type=click.Path(exists=True, path_type=Path))
 @click.option(
     '--slug',
@@ -225,17 +245,26 @@ def push(ctx: click.Context, file: Path, slug: str | None) -> None:
 
     FILE is the path to the YAML dashboard file.
     """
-
-    async def _push() -> dict:
-        async with get_client_from_context(ctx) as client:
-            return await client.push(file, slug)
-
-    result = asyncio.run(_push())
-    dashboard_slug = result.get('slug', slug or 'unknown')
-    console.print(f'[green]Dashboard pushed successfully:[/green] {dashboard_slug}')
+    dashboard_slug = asyncio.run(_async_push(ctx=ctx, file=file, slug=slug))
+    get_console().print(f'[green]Dashboard pushed successfully:[/green] {dashboard_slug}')
 
 
-@cli.command('delete')
+async def _async_push(ctx: click.Context, file: Path, slug: str | None) -> str:
+    """Async implementation of push command."""
+    dashboard = load_model_from_yaml(path=file, model=Dashboard)
+
+    # Determine slug: use provided slug, or derive from metadata.name
+    if slug is None:
+        slug = dashboard.metadata.name
+
+    # Push dashboard (create or update)
+    async with _get_client_from_context(ctx) as client:
+        _ = await client.update_dashboard(slug, dashboard)
+
+    return slug
+
+
+@dashboards_group.command('delete')
 @click.argument('slug')
 @click.option('--yes', '-y', is_flag=True, help='Skip confirmation prompt.')
 @click.pass_context
@@ -246,17 +275,19 @@ def delete(ctx: click.Context, slug: str, yes: bool) -> None:
     SLUG is the dashboard identifier to delete.
     """
     if not yes:
-        click.confirm(f'Are you sure you want to delete dashboard "{slug}"?', abort=True)
+        _ = click.confirm(f'Are you sure you want to delete dashboard "{slug}"?', abort=True)
 
-    async def _delete() -> None:
-        async with get_client_from_context(ctx) as client:
-            await client.delete_dashboard(slug)
-
-    asyncio.run(_delete())
-    console.print(f'[green]Dashboard deleted:[/green] {slug}')
+    asyncio.run(_async_delete(ctx=ctx, slug=slug))
+    get_console().print(f'[green]Dashboard deleted:[/green] {slug}')
 
 
-@cli.command('get')
+async def _async_delete(ctx: click.Context, slug: str) -> None:
+    """Async implementation of delete command."""
+    async with _get_client_from_context(ctx) as client:
+        await client.delete_dashboard(slug)
+
+
+@dashboards_group.command('get')
 @click.argument('slug')
 @click.pass_context
 @handle_errors
@@ -265,128 +296,18 @@ def get_dashboard(ctx: click.Context, slug: str) -> None:
 
     SLUG is the dashboard identifier.
     """
-    import yaml
-
-    async def _get() -> dict:
-        async with get_client_from_context(ctx) as client:
-            return await client.get_dashboard(slug)
-
-    definition = asyncio.run(_get())
-    console.print(yaml.dump(definition, default_flow_style=False, sort_keys=False, allow_unicode=True))
+    asyncio.run(_async_get_dashboard(ctx=ctx, slug=slug))
 
 
-@cli.command('lint')
-@click.argument('files', nargs=-1, type=click.Path(exists=True, path_type=Path))
-@click.option('--strict', is_flag=True, help='Treat warnings as errors.')
-def lint(files: tuple[Path, ...], strict: bool) -> None:  # noqa: ARG001
-    """Validate dashboard YAML files.
+async def _async_get_dashboard(ctx: click.Context, slug: str) -> None:
+    """Async implementation of get command."""
+    async with _get_client_from_context(ctx) as client:
+        dashboard: Dashboard = await client.get_dashboard(slug)
 
-    FILES are the paths to YAML dashboard files to validate.
-
-    This command wraps percli lint if available, otherwise performs
-    basic YAML validation.
-
-    Note: The strict flag is reserved for future use with percli warnings.
-    """
-    if not files:
-        error_console.print('[yellow]No files specified.[/yellow]')
-        sys.exit(0)
-
-    # Check if percli is available
-    percli_available = _check_percli()
-
-    has_errors = False
-
-    for file_path in files:
-        console.print(f'[dim]Validating:[/dim] {file_path}')
-
-        if percli_available:
-            # Use percli for full Perses validation
-            result = subprocess.run(  # noqa: S603
-                ['percli', 'lint', '-f', str(file_path)],  # noqa: S607
-                capture_output=True,
-                text=True,
-                check=False,
-            )
-            if result.returncode != 0:
-                has_errors = True
-                error_console.print(f'[red]Validation failed:[/red] {file_path}')
-                if result.stderr:
-                    error_console.print(result.stderr)
-                if result.stdout:
-                    console.print(result.stdout)
-            else:
-                console.print(f'[green]Valid:[/green] {file_path}')
-        else:
-            # Fall back to basic YAML validation
-            try:
-                _validate_yaml_structure(file_path)
-                console.print(f'[green]Valid:[/green] {file_path}')
-            except (TypeError, ValueError) as e:
-                has_errors = True
-                error_console.print(f'[red]Validation failed:[/red] {file_path}')
-                error_console.print(f'  {e}')
-
-    if has_errors:
-        sys.exit(1)
+    get_console().print(dump_model_to_yaml(model=dashboard))
 
 
-def _check_percli() -> bool:
-    """Check if percli is available on the system.
-
-    Returns:
-        True if percli is available, False otherwise.
-    """
-    try:
-        result = subprocess.run(
-            ['percli', 'version'],  # noqa: S607
-            capture_output=True,
-            check=False,
-        )
-    except FileNotFoundError:
-        return False
-    else:
-        return result.returncode == 0
-
-
-def _validate_yaml_structure(path: Path) -> None:
-    """Perform basic YAML structure validation.
-
-    Args:
-        path: Path to the YAML file.
-
-    Raises:
-        TypeError: If the YAML is not a dictionary.
-        ValueError: If the YAML structure is invalid.
-    """
-    import yaml
-
-    with path.open() as f:
-        data = yaml.safe_load(f)
-
-    if not isinstance(data, dict):
-        msg = 'Dashboard must be a YAML mapping/dictionary'
-        raise TypeError(msg)
-
-    if data.get('kind') != 'Dashboard':
-        msg = 'Dashboard must have kind: Dashboard'
-        raise ValueError(msg)
-
-    if 'metadata' not in data:
-        msg = 'Dashboard must have metadata section'
-        raise ValueError(msg)
-
-    if 'spec' not in data:
-        msg = 'Dashboard must have spec section'
-        raise ValueError(msg)
-
-    metadata = data['metadata']
-    if not isinstance(metadata, dict) or 'name' not in metadata:
-        msg = 'Dashboard metadata must include name'
-        raise ValueError(msg)
-
-
-@cli.command('init')
+@dashboards_group.command('init')
 @click.argument('name')
 @click.option(
     '--output',
@@ -399,8 +320,6 @@ def init(name: str, output: Path | None) -> None:
 
     NAME is the display name for the new dashboard.
     """
-    import yaml
-
     if output is None:
         slug = name.lower().replace(' ', '-').replace('_', '-')
         output = Path(f'{slug}.yaml')
@@ -474,11 +393,10 @@ def init(name: str, output: Path | None) -> None:
         },
     }
 
-    with output.open('w') as f:
-        yaml.dump(template, f, default_flow_style=False, sort_keys=False, allow_unicode=True)
+    dump_model_to_yaml_file(model=Dashboard.model_validate(template), path=output)
 
-    console.print(f'[green]Dashboard template created:[/green] {output}')
-    console.print('[dim]Edit the file and use "logfire-cli push" to upload it.[/dim]')
+    print_success(message='Dashboard template created', extra_message=str(output))
+    print_console(message='Edit the file and use "logfire-cli dashboards push" to upload it.')
 
 
 if __name__ == '__main__':

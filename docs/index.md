@@ -27,21 +27,21 @@ export LOGFIRE_PROJECT="your-project"
 ### List Dashboards
 
 ```bash
-logfire-cli list
+logfire-cli dashboards list
 ```
 
 ### Create a New Dashboard
 
 ```bash
-logfire-cli init "My Dashboard"
+logfire-cli dashboards init "My Dashboard"
 # Edit my-dashboard.yaml
-logfire-cli push my-dashboard.yaml
+logfire-cli dashboards push my-dashboard.yaml
 ```
 
 ### Pull an Existing Dashboard
 
 ```bash
-logfire-cli pull my-dashboard -o my-dashboard.yaml
+logfire-cli dashboards pull my-dashboard -o my-dashboard.yaml
 ```
 
 ## Documentation

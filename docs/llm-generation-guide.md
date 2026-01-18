@@ -216,7 +216,7 @@ After LLM generates a dashboard:
 1. **YAML Parse** - Ensure valid YAML syntax
 2. **Schema Check** - Validate against Perses schema with `percli lint`
 3. **Query Check** - Manually review SQL queries for correctness
-4. **Push to Logfire** - `logfire-cli push dashboard.yaml`
+4. **Push to Logfire** - `logfire-cli dashboards push dashboard.yaml`
 5. **Visual Check** - Verify panels render correctly in Logfire UI
 
 ## Example: Full Generation Prompt

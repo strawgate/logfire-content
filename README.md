@@ -31,46 +31,52 @@ export LOGFIRE_PROJECT="your-project"
 ### List Dashboards
 
 ```bash
-logfire-cli list
+logfire-cli dashboards list
 ```
+
+Note: All commands are under the `dashboards` subcommand group.
 
 ### Create a Dashboard
 
 ```bash
 # Create from template
-logfire-cli init "My Dashboard"
+logfire-cli dashboards init "My Dashboard"
 
 # Edit my-dashboard.yaml, then push
-logfire-cli push my-dashboard.yaml
+logfire-cli dashboards push my-dashboard.yaml
 ```
 
 ### Pull and Modify
 
 ```bash
 # Export existing dashboard
-logfire-cli pull my-dashboard -o my-dashboard.yaml
+logfire-cli dashboards pull my-dashboard -o my-dashboard.yaml
 
 # Edit and push back
-logfire-cli push my-dashboard.yaml
+logfire-cli dashboards push my-dashboard.yaml
 ```
 
 ### Validate Dashboards
 
 ```bash
 logfire-cli lint my-dashboard.yaml
+# or
+logfire-cli dashboards lint my-dashboard.yaml
 ```
 
 ## CLI Commands
 
 | Command | Description |
 |---------|-------------|
-| `logfire-cli list` | List all dashboards |
-| `logfire-cli pull <slug>` | Export dashboard to YAML |
-| `logfire-cli push <file>` | Import YAML to Logfire |
-| `logfire-cli get <slug>` | Print dashboard YAML |
-| `logfire-cli delete <slug>` | Delete a dashboard |
+| `logfire-cli dashboards list` | List all dashboards |
+| `logfire-cli dashboards pull <slug>` | Export dashboard to YAML |
+| `logfire-cli dashboards push <file>` | Import YAML to Logfire (creates or updates) |
+| `logfire-cli dashboards get <slug>` | Print dashboard YAML |
+| `logfire-cli dashboards delete <slug>` | Delete a dashboard |
+| `logfire-cli dashboards init <name>` | Create dashboard template |
 | `logfire-cli lint <files>` | Validate YAML files |
-| `logfire-cli init <name>` | Create dashboard template |
+
+All dashboard operations use strongly-typed Pydantic models for type safety and validation.
 
 ## Integrations
 
@@ -83,7 +89,7 @@ Pre-built dashboards for common technologies:
 ### Deploy an Integration
 
 ```bash
-logfire-cli push integrations/host-metrics/overview.yaml
+logfire-cli dashboards push integrations/host-metrics/overview.yaml
 ```
 
 ## Dashboard Format
@@ -138,45 +144,9 @@ spec:
 - [Panel Types](docs/panel-types.md)
 - [LLM Generation Guide](docs/llm-generation-guide.md)
 
-## Development
+## Contributing
 
-### Setup
-
-```bash
-# Clone repository
-git clone https://github.com/strawgate/logfire-content.git
-cd logfire-content
-
-# Install dependencies
-make sync
-```
-
-### Commands
-
-```bash
-make ci          # Run all checks
-make lint-fix    # Fix linting issues
-make typecheck   # Type checking
-make test        # Run tests
-make docs-serve  # Preview documentation
-```
-
-### Project Structure
-
-```
-logfire-content/
-├── src/logfire_cli/        # CLI source code
-│   ├── cli.py              # Click commands
-│   ├── client.py           # API client
-│   └── models.py           # Pydantic models
-├── integrations/           # Dashboard content
-│   └── host-metrics/       # Host metrics integration
-├── docs/                   # Documentation
-├── tests/                  # Test suite
-├── pyproject.toml          # Project configuration
-├── Makefile                # Development commands
-└── AGENTS.md               # AI agent guidelines
-```
+For development setup and contribution guidelines, see [DEVELOPING.md](DEVELOPING.md).
 
 ## License
 

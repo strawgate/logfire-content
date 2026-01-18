@@ -76,7 +76,7 @@ The `overview.yaml` dashboard provides:
 ### Installation
 
 ```bash
-logfire-cli push integrations/host-metrics/overview.yaml
+logfire-cli dashboards push integrations/host-metrics/overview.yaml
 ```
 
 ## Alerts

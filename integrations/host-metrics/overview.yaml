@@ -1,0 +1,535 @@
+kind: Dashboard
+metadata:
+  name: host-metrics-overview
+  project: ""
+spec:
+  display:
+    name: "Host Metrics Overview"
+  variables: []
+  panels:
+    # =========================================================================
+    # CPU Panels
+    # =========================================================================
+    CPUUtilization:
+      kind: Panel
+      spec:
+        display:
+          name: "CPU Utilization"
+          description: "CPU utilization by state over time"
+        plugin:
+          kind: TimeSeriesChart
+          spec:
+            legend:
+              position: bottom
+              mode: table
+            yAxis:
+              format:
+                unit: percent
+              min: 0
+              max: 100
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: LogfireTimeSeriesQuery
+                spec:
+                  query: |
+                    SELECT
+                      time_bucket($resolution, recorded_timestamp) AS x,
+                      attributes->>'state' AS series,
+                      avg(scalar_value) * 100 AS y
+                    FROM metrics
+                    WHERE metric_name = 'system.cpu.utilization'
+                    GROUP BY x, series
+                    ORDER BY x
+
+    CPUUtilizationStat:
+      kind: Panel
+      spec:
+        display:
+          name: "CPU Usage"
+          description: "Current average CPU utilization"
+        plugin:
+          kind: StatChart
+          spec:
+            calculation: last
+            format:
+              unit: percent
+            thresholds:
+              steps:
+                - value: 0
+                  color: green
+                - value: 80
+                  color: yellow
+                - value: 95
+                  color: red
+            sparkline:
+              show: true
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: LogfireTimeSeriesQuery
+                spec:
+                  query: |
+                    SELECT
+                      time_bucket($resolution, recorded_timestamp) AS x,
+                      avg(scalar_value) * 100 AS y
+                    FROM metrics
+                    WHERE metric_name = 'system.cpu.utilization'
+                      AND attributes->>'state' NOT IN ('idle', 'iowait')
+                    GROUP BY x
+                    ORDER BY x
+
+    LoadAverage:
+      kind: Panel
+      spec:
+        display:
+          name: "Load Average"
+          description: "System load average (1m, 5m, 15m)"
+        plugin:
+          kind: TimeSeriesChart
+          spec:
+            legend:
+              position: bottom
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: LogfireTimeSeriesQuery
+                spec:
+                  query: |
+                    SELECT
+                      time_bucket($resolution, recorded_timestamp) AS x,
+                      CASE
+                        WHEN metric_name = 'system.cpu.load_average.1m' THEN '1m'
+                        WHEN metric_name = 'system.cpu.load_average.5m' THEN '5m'
+                        WHEN metric_name = 'system.cpu.load_average.15m' THEN '15m'
+                      END AS series,
+                      avg(scalar_value) AS y
+                    FROM metrics
+                    WHERE metric_name LIKE 'system.cpu.load_average%'
+                    GROUP BY x, metric_name
+                    ORDER BY x
+
+    # =========================================================================
+    # Memory Panels
+    # =========================================================================
+    MemoryUsage:
+      kind: Panel
+      spec:
+        display:
+          name: "Memory Usage"
+          description: "Memory usage by type over time"
+        plugin:
+          kind: TimeSeriesChart
+          spec:
+            legend:
+              position: bottom
+              mode: table
+            yAxis:
+              format:
+                unit: bytes
+            visual:
+              areaOpacity: 0.5
+              stack: all
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: LogfireTimeSeriesQuery
+                spec:
+                  query: |
+                    SELECT
+                      time_bucket($resolution, recorded_timestamp) AS x,
+                      attributes->>'state' AS series,
+                      avg(scalar_value) AS y
+                    FROM metrics
+                    WHERE metric_name = 'system.memory.usage'
+                    GROUP BY x, series
+                    ORDER BY x
+
+    MemoryUtilizationStat:
+      kind: Panel
+      spec:
+        display:
+          name: "Memory Usage"
+          description: "Current memory utilization"
+        plugin:
+          kind: StatChart
+          spec:
+            calculation: last
+            format:
+              unit: percent
+            thresholds:
+              steps:
+                - value: 0
+                  color: green
+                - value: 80
+                  color: yellow
+                - value: 95
+                  color: red
+            sparkline:
+              show: true
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: LogfireTimeSeriesQuery
+                spec:
+                  query: |
+                    SELECT
+                      time_bucket($resolution, recorded_timestamp) AS x,
+                      avg(scalar_value) * 100 AS y
+                    FROM metrics
+                    WHERE metric_name = 'system.memory.utilization'
+                      AND attributes->>'state' = 'used'
+                    GROUP BY x
+                    ORDER BY x
+
+    # =========================================================================
+    # Disk I/O Panels
+    # =========================================================================
+    DiskIO:
+      kind: Panel
+      spec:
+        display:
+          name: "Disk I/O"
+          description: "Disk read/write throughput"
+        plugin:
+          kind: TimeSeriesChart
+          spec:
+            legend:
+              position: bottom
+            yAxis:
+              format:
+                unit: bytes/sec
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: LogfireTimeSeriesQuery
+                spec:
+                  query: |
+                    SELECT
+                      time_bucket($resolution, recorded_timestamp) AS x,
+                      attributes->>'direction' AS series,
+                      sum(scalar_value) / EXTRACT(EPOCH FROM $resolution) AS y
+                    FROM metrics
+                    WHERE metric_name = 'system.disk.io'
+                    GROUP BY x, series
+                    ORDER BY x
+
+    DiskOperations:
+      kind: Panel
+      spec:
+        display:
+          name: "Disk IOPS"
+          description: "Disk operations per second"
+        plugin:
+          kind: TimeSeriesChart
+          spec:
+            legend:
+              position: bottom
+            yAxis:
+              format:
+                unit: ops/sec
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: LogfireTimeSeriesQuery
+                spec:
+                  query: |
+                    SELECT
+                      time_bucket($resolution, recorded_timestamp) AS x,
+                      attributes->>'direction' AS series,
+                      sum(scalar_value) / EXTRACT(EPOCH FROM $resolution) AS y
+                    FROM metrics
+                    WHERE metric_name = 'system.disk.operations'
+                    GROUP BY x, series
+                    ORDER BY x
+
+    # =========================================================================
+    # Network Panels
+    # =========================================================================
+    NetworkIO:
+      kind: Panel
+      spec:
+        display:
+          name: "Network I/O"
+          description: "Network throughput by direction"
+        plugin:
+          kind: TimeSeriesChart
+          spec:
+            legend:
+              position: bottom
+            yAxis:
+              format:
+                unit: bytes/sec
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: LogfireTimeSeriesQuery
+                spec:
+                  query: |
+                    SELECT
+                      time_bucket($resolution, recorded_timestamp) AS x,
+                      attributes->>'direction' AS series,
+                      sum(scalar_value) / EXTRACT(EPOCH FROM $resolution) AS y
+                    FROM metrics
+                    WHERE metric_name = 'system.network.io'
+                    GROUP BY x, series
+                    ORDER BY x
+
+    NetworkPackets:
+      kind: Panel
+      spec:
+        display:
+          name: "Network Packets"
+          description: "Network packets per second"
+        plugin:
+          kind: TimeSeriesChart
+          spec:
+            legend:
+              position: bottom
+            yAxis:
+              format:
+                unit: pps
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: LogfireTimeSeriesQuery
+                spec:
+                  query: |
+                    SELECT
+                      time_bucket($resolution, recorded_timestamp) AS x,
+                      attributes->>'direction' AS series,
+                      sum(scalar_value) / EXTRACT(EPOCH FROM $resolution) AS y
+                    FROM metrics
+                    WHERE metric_name = 'system.network.packets'
+                    GROUP BY x, series
+                    ORDER BY x
+
+    NetworkErrors:
+      kind: Panel
+      spec:
+        display:
+          name: "Network Errors"
+          description: "Network errors and dropped packets"
+        plugin:
+          kind: TimeSeriesChart
+          spec:
+            legend:
+              position: bottom
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: LogfireTimeSeriesQuery
+                spec:
+                  query: |
+                    SELECT
+                      time_bucket($resolution, recorded_timestamp) AS x,
+                      metric_name || ' (' || attributes->>'direction' || ')' AS series,
+                      sum(scalar_value) / EXTRACT(EPOCH FROM $resolution) AS y
+                    FROM metrics
+                    WHERE metric_name IN ('system.network.errors', 'system.network.dropped')
+                    GROUP BY x, metric_name, attributes->>'direction'
+                    ORDER BY x
+
+    # =========================================================================
+    # Filesystem Panels
+    # =========================================================================
+    FilesystemUsage:
+      kind: Panel
+      spec:
+        display:
+          name: "Filesystem Usage"
+          description: "Disk space usage by mount point"
+        plugin:
+          kind: TimeSeriesChart
+          spec:
+            legend:
+              position: right
+              mode: table
+            yAxis:
+              format:
+                unit: percent
+              min: 0
+              max: 100
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: LogfireTimeSeriesQuery
+                spec:
+                  query: |
+                    SELECT
+                      time_bucket($resolution, recorded_timestamp) AS x,
+                      attributes->>'mountpoint' AS series,
+                      avg(scalar_value) * 100 AS y
+                    FROM metrics
+                    WHERE metric_name = 'system.filesystem.utilization'
+                      AND attributes->>'type' NOT IN ('tmpfs', 'devtmpfs', 'overlay')
+                    GROUP BY x, series
+                    ORDER BY x
+
+    FilesystemTable:
+      kind: Panel
+      spec:
+        display:
+          name: "Filesystem Details"
+          description: "Current filesystem usage details"
+        plugin:
+          kind: Table
+          spec:
+            columnSettings:
+              mountpoint:
+                name: Mount Point
+              device:
+                name: Device
+              type:
+                name: Type
+              used:
+                name: Used
+                format:
+                  unit: bytes
+              total:
+                name: Total
+                format:
+                  unit: bytes
+              utilization:
+                name: "% Used"
+                format:
+                  unit: percent
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: LogfireTimeSeriesQuery
+                spec:
+                  query: |
+                    WITH latest AS (
+                      SELECT
+                        attributes->>'mountpoint' AS mountpoint,
+                        attributes->>'device' AS device,
+                        attributes->>'type' AS type,
+                        attributes->>'state' AS state,
+                        scalar_value AS value,
+                        ROW_NUMBER() OVER (
+                          PARTITION BY attributes->>'mountpoint', attributes->>'state'
+                          ORDER BY recorded_timestamp DESC
+                        ) AS rn
+                      FROM metrics
+                      WHERE metric_name = 'system.filesystem.usage'
+                        AND recorded_timestamp > now() - interval '5 minutes'
+                        AND attributes->>'type' NOT IN ('tmpfs', 'devtmpfs', 'overlay')
+                    )
+                    SELECT
+                      mountpoint,
+                      device,
+                      type,
+                      MAX(CASE WHEN state = 'used' THEN value END) AS used,
+                      MAX(CASE WHEN state = 'used' THEN value END) +
+                        MAX(CASE WHEN state = 'free' THEN value END) AS total,
+                      MAX(CASE WHEN state = 'used' THEN value END) /
+                        NULLIF(MAX(CASE WHEN state = 'used' THEN value END) +
+                          MAX(CASE WHEN state = 'free' THEN value END), 0) * 100 AS utilization
+                    FROM latest
+                    WHERE rn = 1
+                    GROUP BY mountpoint, device, type
+                    ORDER BY utilization DESC
+
+  layouts:
+    - kind: Grid
+      spec:
+        display:
+          title: "Overview"
+        items:
+          # Top row - Stats
+          - x: 0
+            y: 0
+            width: 4
+            height: 4
+            content:
+              $ref: "#/spec/panels/CPUUtilizationStat"
+          - x: 4
+            y: 0
+            width: 4
+            height: 4
+            content:
+              $ref: "#/spec/panels/MemoryUtilizationStat"
+          - x: 8
+            y: 0
+            width: 16
+            height: 4
+            content:
+              $ref: "#/spec/panels/LoadAverage"
+
+          # CPU and Memory row
+          - x: 0
+            y: 4
+            width: 12
+            height: 8
+            content:
+              $ref: "#/spec/panels/CPUUtilization"
+          - x: 12
+            y: 4
+            width: 12
+            height: 8
+            content:
+              $ref: "#/spec/panels/MemoryUsage"
+
+          # Disk row
+          - x: 0
+            y: 12
+            width: 12
+            height: 8
+            content:
+              $ref: "#/spec/panels/DiskIO"
+          - x: 12
+            y: 12
+            width: 12
+            height: 8
+            content:
+              $ref: "#/spec/panels/DiskOperations"
+
+          # Network row
+          - x: 0
+            y: 20
+            width: 8
+            height: 8
+            content:
+              $ref: "#/spec/panels/NetworkIO"
+          - x: 8
+            y: 20
+            width: 8
+            height: 8
+            content:
+              $ref: "#/spec/panels/NetworkPackets"
+          - x: 16
+            y: 20
+            width: 8
+            height: 8
+            content:
+              $ref: "#/spec/panels/NetworkErrors"
+
+          # Filesystem row
+          - x: 0
+            y: 28
+            width: 12
+            height: 8
+            content:
+              $ref: "#/spec/panels/FilesystemUsage"
+          - x: 12
+            y: 28
+            width: 12
+            height: 8
+            content:
+              $ref: "#/spec/panels/FilesystemTable"
+
+  duration: 1h
+  refreshInterval: 30s

@@ -1,0 +1,71 @@
+kind: Dashboard
+metadata:
+  name: Memcached
+  project: starter-project
+  version: 0
+  createdAt: '2026-01-19T03:25:11.390979Z'
+  updatedAt: '2026-01-19T03:29:01.101694Z'
+spec:
+  display:
+    name: Memcached
+  datasources: {}
+  panels:
+    MemcachedCacheOperations:
+      kind: Panel
+      spec:
+        display:
+          name: Memcached Cache Operations
+        plugin:
+          kind: Values
+          spec: {}
+        queries:
+        - kind: NonTimeSeriesQuery
+          spec:
+            plugin:
+              kind: LogfireNonTimeSeriesQuery
+              spec:
+                query: 'select count(distinct(otel_resource_attributes -> ''server.address''))
+                  as ''Servers'' from metrics
+
+                  where metric_name = ''mongodb.cache.operations'''
+    MemcachedCacheOperations-1:
+      kind: Panel
+      spec:
+        display:
+          name: Memcached Cache Operations
+        plugin:
+          kind: Table
+          spec: {}
+        queries:
+        - kind: NonTimeSeriesQuery
+          spec:
+            plugin:
+              kind: LogfireNonTimeSeriesQuery
+              spec:
+                query: 'select day, start_timestamp, scalar_value, attributes, otel_resource_attributes
+                  from metrics
+
+                  where metric_name = ''mongodb.cache.operations'''
+  layouts:
+  - kind: Grid
+    spec:
+      display:
+        title: Panel Group
+        collapse:
+          open: true
+      items:
+      - x: 0
+        y: 0
+        width: 4
+        height: 6
+        content:
+          $ref: '#/spec/panels/MemcachedCacheOperations'
+      - x: 0
+        y: 6
+        width: 24
+        height: 12
+        content:
+          $ref: '#/spec/panels/MemcachedCacheOperations-1'
+  variables: []
+  duration: 1h
+  refreshInterval: 0s

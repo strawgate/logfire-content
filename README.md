@@ -24,6 +24,8 @@ uv pip install logfire-cli
 
 ### Configure Authentication
 
+You will need to get an API Token from LogFire, this requires a UI API Token, which is valid for about 7 days. You can get a UI API Token from the LogFire UI by inspecting the network requests and looking for the Authorization header. Do not copy the `Bearer` prefix.
+
 ```bash
 export LOGFIRE_TOKEN="your-api-token"
 export LOGFIRE_ORGANIZATION="your-org"

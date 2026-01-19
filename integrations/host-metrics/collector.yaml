@@ -51,7 +51,11 @@ receivers:
             enabled: true
         # Exclude virtual filesystems
         exclude_mount_points:
-          mount_points: [/proc/*, /sys/*, /dev/*, /run/*]
+          mount_points:
+            - /proc/*
+            - /sys/*
+            - /dev/*
+            - /run/*
           match_type: regexp
 
       # Network metrics
@@ -67,7 +71,11 @@ receivers:
             enabled: true
         # Exclude loopback and virtual interfaces
         exclude:
-          interfaces: [lo, veth*, docker*, br-*]
+          interfaces:
+            - lo
+            - veth*
+            - docker*
+            - br-*
           match_type: regexp
 
       # Load average (Linux/macOS only)
@@ -117,9 +125,14 @@ exporters:
 service:
   pipelines:
     metrics:
-      receivers: [hostmetrics]
-      processors: [memory_limiter, resource, batch]
-      exporters: [otlp]
+      receivers:
+        - hostmetrics
+      processors:
+        - memory_limiter
+        - resource
+        - batch
+      exporters:
+        - otlp
 
   # Telemetry for the collector itself
   telemetry:

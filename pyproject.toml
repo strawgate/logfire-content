@@ -190,6 +190,18 @@ markers = [
 ]
 
 # ============================================================================
+# YAMLFix Configuration
+# ============================================================================
+
+[tool.yamlfix]
+# Increase line length so long query strings are preserved as multiline
+line_length = 200
+# Preserve quotes to maintain string formatting
+preserve_quotes = true
+# Use block style for sequences to keep queries readable
+sequence_style = "block_style"
+
+# ============================================================================
 # Coverage Configuration
 # ============================================================================
 

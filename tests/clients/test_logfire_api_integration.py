@@ -156,14 +156,14 @@ async def test_crud_dashboard(
         {
             'kind': 'Dashboard',
             'metadata': {
-                'name': 'test-create-simple-dashboard',
+                'name': slug,
                 'project': 'starter-project',
                 'version': 0,
                 'created_at': IsStr(),
                 'updated_at': IsStr(),
             },
             'spec': {
-                'display': {'name': 'test-create-simple-dashboard', 'description': None},
+                'display': {'name': slug, 'description': None},
                 'datasources': {},
                 'panels': {},
                 'layouts': [],
@@ -198,14 +198,14 @@ async def test_crud_dashboard(
         {
             'kind': 'Dashboard',
             'metadata': {
-                'name': 'test-create-simple-dashboard',
+                'name': slug,
                 'project': 'starter-project',
                 'version': 0,
                 'created_at': IsStr(),
                 'updated_at': IsStr(),
             },
             'spec': {
-                'display': {'name': 'test-create-simple-dashboard', 'description': 'my cool description'},
+                'display': {'name': slug, 'description': 'my cool description'},
                 'datasources': {},
                 'panels': {},
                 'layouts': [],

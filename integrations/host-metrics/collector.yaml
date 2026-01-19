@@ -1,3 +1,4 @@
+---
 # OpenTelemetry Collector configuration for Host Metrics
 # This configuration collects system-level metrics and exports them to Logfire.
 #
@@ -9,7 +10,6 @@
 #   - Adjusting collection_interval based on your needs (30s-60s recommended)
 #   - Filtering specific devices/filesystems if you have many
 #   - Adding resource detection for cloud metadata
-
 receivers:
   hostmetrics:
     collection_interval: 30s
@@ -95,13 +95,12 @@ receivers:
       #       enabled: true
       #     system.processes.created:
       #       enabled: true
-
 processors:
   # Add resource attributes
   resource:
     attributes:
       - key: service.name
-        value: "host-metrics"
+        value: host-metrics
         action: upsert
 
   # Batch metrics for efficiency
@@ -114,23 +113,26 @@ processors:
     check_interval: 5s
     limit_mib: 400
     spike_limit_mib: 100
-
 exporters:
   otlp:
-    endpoint: "https://logfire-ingest.pydantic.dev"
+    endpoint: https://logfire-ingest.pydantic.dev
     headers:
-      Authorization: "Bearer ${env:LOGFIRE_TOKEN}"
+      Authorization: Bearer ${env:LOGFIRE_TOKEN}
 
   # Debug exporter (uncomment for troubleshooting)
   # debug:
   #   verbosity: detailed
-
 service:
   pipelines:
     metrics:
-      receivers: [hostmetrics]
-      processors: [memory_limiter, resource, batch]
-      exporters: [otlp]
+      receivers:
+        - hostmetrics
+      processors:
+        - memory_limiter
+        - resource
+        - batch
+      exporters:
+        - otlp
 
   # Telemetry for the collector itself
   telemetry:

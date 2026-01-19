@@ -1,10 +1,11 @@
+---
 kind: Dashboard
 metadata:
   name: host-metrics-overview
-  project: ""
+  project: ''
 spec:
   display:
-    name: "Host Metrics Overview"
+    name: Host Metrics Overview
   variables: []
   panels:
     # =========================================================================
@@ -14,8 +15,8 @@ spec:
       kind: Panel
       spec:
         display:
-          name: "CPU Utilization"
-          description: "CPU utilization by state over time"
+          name: CPU Utilization
+          description: CPU utilization by state over time
         plugin:
           kind: TimeSeriesChart
           spec:
@@ -42,13 +43,12 @@ spec:
                     WHERE metric_name = 'system.cpu.utilization'
                     GROUP BY x, series
                     ORDER BY x
-
     CPUUtilizationStat:
       kind: Panel
       spec:
         display:
-          name: "CPU Usage"
-          description: "Current average CPU utilization"
+          name: CPU Usage
+          description: Current average CPU utilization
         plugin:
           kind: StatChart
           spec:
@@ -80,13 +80,12 @@ spec:
                       AND attributes->>'state' NOT IN ('idle', 'iowait')
                     GROUP BY x
                     ORDER BY x
-
     LoadAverage:
       kind: Panel
       spec:
         display:
-          name: "Load Average"
-          description: "System load average (1m, 5m, 15m)"
+          name: Load Average
+          description: System load average (1m, 5m, 15m)
         plugin:
           kind: TimeSeriesChart
           spec:
@@ -119,8 +118,8 @@ spec:
       kind: Panel
       spec:
         display:
-          name: "Memory Usage"
-          description: "Memory usage by type over time"
+          name: Memory Usage
+          description: Memory usage by type over time
         plugin:
           kind: TimeSeriesChart
           spec:
@@ -148,13 +147,12 @@ spec:
                     WHERE metric_name = 'system.memory.usage'
                     GROUP BY x, series
                     ORDER BY x
-
     MemoryUtilizationStat:
       kind: Panel
       spec:
         display:
-          name: "Memory Usage"
-          description: "Current memory utilization"
+          name: Memory Usage
+          description: Current memory utilization
         plugin:
           kind: StatChart
           spec:
@@ -194,8 +192,8 @@ spec:
       kind: Panel
       spec:
         display:
-          name: "Disk I/O"
-          description: "Disk read/write throughput"
+          name: Disk I/O
+          description: Disk read/write throughput
         plugin:
           kind: TimeSeriesChart
           spec:
@@ -219,13 +217,12 @@ spec:
                     WHERE metric_name = 'system.disk.io'
                     GROUP BY x, series
                     ORDER BY x
-
     DiskOperations:
       kind: Panel
       spec:
         display:
-          name: "Disk IOPS"
-          description: "Disk operations per second"
+          name: Disk IOPS
+          description: Disk operations per second
         plugin:
           kind: TimeSeriesChart
           spec:
@@ -257,8 +254,8 @@ spec:
       kind: Panel
       spec:
         display:
-          name: "Network I/O"
-          description: "Network throughput by direction"
+          name: Network I/O
+          description: Network throughput by direction
         plugin:
           kind: TimeSeriesChart
           spec:
@@ -282,13 +279,12 @@ spec:
                     WHERE metric_name = 'system.network.io'
                     GROUP BY x, series
                     ORDER BY x
-
     NetworkPackets:
       kind: Panel
       spec:
         display:
-          name: "Network Packets"
-          description: "Network packets per second"
+          name: Network Packets
+          description: Network packets per second
         plugin:
           kind: TimeSeriesChart
           spec:
@@ -312,13 +308,12 @@ spec:
                     WHERE metric_name = 'system.network.packets'
                     GROUP BY x, series
                     ORDER BY x
-
     NetworkErrors:
       kind: Panel
       spec:
         display:
-          name: "Network Errors"
-          description: "Network errors and dropped packets"
+          name: Network Errors
+          description: Network errors and dropped packets
         plugin:
           kind: TimeSeriesChart
           spec:
@@ -347,8 +342,8 @@ spec:
       kind: Panel
       spec:
         display:
-          name: "Filesystem Usage"
-          description: "Disk space usage by mount point"
+          name: Filesystem Usage
+          description: Disk space usage by mount point
         plugin:
           kind: TimeSeriesChart
           spec:
@@ -376,13 +371,12 @@ spec:
                       AND attributes->>'type' NOT IN ('tmpfs', 'devtmpfs', 'overlay')
                     GROUP BY x, series
                     ORDER BY x
-
     FilesystemTable:
       kind: Panel
       spec:
         display:
-          name: "Filesystem Details"
-          description: "Current filesystem usage details"
+          name: Filesystem Details
+          description: Current filesystem usage details
         plugin:
           kind: Table
           spec:
@@ -402,7 +396,7 @@ spec:
                 format:
                   unit: bytes
               utilization:
-                name: "% Used"
+                name: '% Used'
                 format:
                   unit: percent
         queries:
@@ -442,12 +436,11 @@ spec:
                     WHERE rn = 1
                     GROUP BY mountpoint, device, type
                     ORDER BY utilization DESC
-
   layouts:
     - kind: Grid
       spec:
         display:
-          title: "Overview"
+          title: Overview
         items:
           # Top row - Stats
           - x: 0
@@ -455,19 +448,19 @@ spec:
             width: 4
             height: 4
             content:
-              $ref: "#/spec/panels/CPUUtilizationStat"
+              $ref: '#/spec/panels/CPUUtilizationStat'
           - x: 4
             y: 0
             width: 4
             height: 4
             content:
-              $ref: "#/spec/panels/MemoryUtilizationStat"
+              $ref: '#/spec/panels/MemoryUtilizationStat'
           - x: 8
             y: 0
             width: 16
             height: 4
             content:
-              $ref: "#/spec/panels/LoadAverage"
+              $ref: '#/spec/panels/LoadAverage'
 
           # CPU and Memory row
           - x: 0
@@ -475,13 +468,13 @@ spec:
             width: 12
             height: 8
             content:
-              $ref: "#/spec/panels/CPUUtilization"
+              $ref: '#/spec/panels/CPUUtilization'
           - x: 12
             y: 4
             width: 12
             height: 8
             content:
-              $ref: "#/spec/panels/MemoryUsage"
+              $ref: '#/spec/panels/MemoryUsage'
 
           # Disk row
           - x: 0
@@ -489,13 +482,13 @@ spec:
             width: 12
             height: 8
             content:
-              $ref: "#/spec/panels/DiskIO"
+              $ref: '#/spec/panels/DiskIO'
           - x: 12
             y: 12
             width: 12
             height: 8
             content:
-              $ref: "#/spec/panels/DiskOperations"
+              $ref: '#/spec/panels/DiskOperations'
 
           # Network row
           - x: 0
@@ -503,19 +496,19 @@ spec:
             width: 8
             height: 8
             content:
-              $ref: "#/spec/panels/NetworkIO"
+              $ref: '#/spec/panels/NetworkIO'
           - x: 8
             y: 20
             width: 8
             height: 8
             content:
-              $ref: "#/spec/panels/NetworkPackets"
+              $ref: '#/spec/panels/NetworkPackets'
           - x: 16
             y: 20
             width: 8
             height: 8
             content:
-              $ref: "#/spec/panels/NetworkErrors"
+              $ref: '#/spec/panels/NetworkErrors'
 
           # Filesystem row
           - x: 0
@@ -523,13 +516,12 @@ spec:
             width: 12
             height: 8
             content:
-              $ref: "#/spec/panels/FilesystemUsage"
+              $ref: '#/spec/panels/FilesystemUsage'
           - x: 12
             y: 28
             width: 12
             height: 8
             content:
-              $ref: "#/spec/panels/FilesystemTable"
-
+              $ref: '#/spec/panels/FilesystemTable'
   duration: 1h
   refreshInterval: 30s

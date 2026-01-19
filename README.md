@@ -1,13 +1,15 @@
 # Logfire Content
 
-CLI and content packs for managing [Pydantic Logfire](https://logfire.pydantic.dev/) dashboards.
+CLI and content packs for managing
+[Pydantic Logfire](https://logfire.pydantic.dev/) dashboards.
 
 ## Overview
 
 This repository provides:
 
 1. **logfire-cli**: A command-line tool for managing Logfire dashboards
-2. **Integrations**: Pre-built [Perses](https://perses.dev/) dashboards for common infrastructure
+2. **Integrations**: Pre-built [Perses](https://perses.dev/) dashboards for
+   common infrastructure
 3. **Documentation**: Query references and guides for building dashboards
 
 ## Installation
@@ -22,6 +24,11 @@ uv pip install logfire-cli
 
 ### Configure Authentication
 
+You will need to get an API Token from LogFire, this requires a UI API Token,
+which is valid for about 7 days. You can get a UI API Token from the LogFire
+UI by inspecting the network requests and looking for the Authorization
+header. Do not copy the `Bearer` prefix.
+
 ```bash
 export LOGFIRE_TOKEN="your-api-token"
 export LOGFIRE_ORGANIZATION="your-org"
@@ -31,64 +38,63 @@ export LOGFIRE_PROJECT="your-project"
 ### List Dashboards
 
 ```bash
-logfire-cli list
+logfire-cli dashboards list
 ```
+
+Note: All commands are under the `dashboards` subcommand group.
 
 ### Create a Dashboard
 
 ```bash
 # Create from template
-logfire-cli init "My Dashboard"
+logfire-cli dashboards init "My Dashboard"
 
-# Edit my-dashboard.yaml, then push
-logfire-cli push my-dashboard.yaml
+# Edit my-dashboard.yaml, then import
+logfire-cli dashboards import my-dashboard.yaml
 ```
 
-### Pull and Modify
+### Export and Modify
 
 ```bash
 # Export existing dashboard
-logfire-cli pull my-dashboard -o my-dashboard.yaml
+logfire-cli dashboards export my-dashboard -o my-dashboard.yaml
 
-# Edit and push back
-logfire-cli push my-dashboard.yaml
-```
-
-### Validate Dashboards
-
-```bash
-logfire-cli lint my-dashboard.yaml
+# Edit and import back
+logfire-cli dashboards import my-dashboard.yaml
 ```
 
 ## CLI Commands
 
-| Command | Description |
-|---------|-------------|
-| `logfire-cli list` | List all dashboards |
-| `logfire-cli pull <slug>` | Export dashboard to YAML |
-| `logfire-cli push <file>` | Import YAML to Logfire |
-| `logfire-cli get <slug>` | Print dashboard YAML |
-| `logfire-cli delete <slug>` | Delete a dashboard |
-| `logfire-cli lint <files>` | Validate YAML files |
-| `logfire-cli init <name>` | Create dashboard template |
+|Command|Description|
+|---|---|
+|`logfire-cli dashboards list`|List all dashboards|
+|`logfire-cli dashboards export <slug>`|Export dashboard to YAML|
+|`logfire-cli dashboards import <file>`|Import YAML to Logfire (creates or updates)|
+|`logfire-cli dashboards get <slug>`|Print dashboard YAML|
+|`logfire-cli dashboards delete <slug>`|Delete a dashboard|
+|`logfire-cli dashboards init <name>`|Create dashboard template|
+
+All dashboard operations use strongly-typed Pydantic models for type safety
+and validation.
 
 ## Integrations
 
 Pre-built dashboards for common technologies:
 
-| Integration | Description |
-|-------------|-------------|
-| [host-metrics](integrations/host-metrics/) | System CPU, memory, disk, network |
+|Integration|Description|
+|---|---|
+|[host-metrics](integrations/host-metrics/)|System CPU, memory, disk, network|
 
 ### Deploy an Integration
 
 ```bash
-logfire-cli push integrations/host-metrics/overview.yaml
+logfire-cli dashboards import integrations/host-metrics/overview.yaml
 ```
 
 ## Dashboard Format
 
-Dashboards use the [Perses](https://perses.dev/) YAML format with Logfire-specific query plugins:
+Dashboards use the [Perses](https://perses.dev/) YAML format with
+Logfire-specific query plugins:
 
 ```yaml
 kind: Dashboard
@@ -138,45 +144,9 @@ spec:
 - [Panel Types](docs/panel-types.md)
 - [LLM Generation Guide](docs/llm-generation-guide.md)
 
-## Development
+## Contributing
 
-### Setup
-
-```bash
-# Clone repository
-git clone https://github.com/strawgate/logfire-content.git
-cd logfire-content
-
-# Install dependencies
-make sync
-```
-
-### Commands
-
-```bash
-make ci          # Run all checks
-make lint-fix    # Fix linting issues
-make typecheck   # Type checking
-make test        # Run tests
-make docs-serve  # Preview documentation
-```
-
-### Project Structure
-
-```
-logfire-content/
-├── src/logfire_cli/        # CLI source code
-│   ├── cli.py              # Click commands
-│   ├── client.py           # API client
-│   └── models.py           # Pydantic models
-├── integrations/           # Dashboard content
-│   └── host-metrics/       # Host metrics integration
-├── docs/                   # Documentation
-├── tests/                  # Test suite
-├── pyproject.toml          # Project configuration
-├── Makefile                # Development commands
-└── AGENTS.md               # AI agent guidelines
-```
+For development setup and contribution guidelines, see [DEVELOPING.md](DEVELOPING.md).
 
 ## License
 

@@ -1,6 +1,7 @@
 # Perses Panel Types
 
-Logfire dashboards use [Perses](https://perses.dev/) panels. This document describes the available panel types and their configuration options.
+Logfire dashboards use [Perses](https://perses.dev/) panels. This document
+describes the available panel types and their configuration options.
 
 ## TimeSeriesChart
 
@@ -47,17 +48,17 @@ MyPanel:
 
 ### Configuration Options
 
-| Option | Type | Description |
-|--------|------|-------------|
-| `legend.position` | string | Legend position: `bottom`, `right`, `hidden` |
-| `legend.mode` | string | Legend display: `list`, `table` |
-| `yAxis.format.unit` | string | Unit for Y-axis values |
-| `yAxis.min` | number | Minimum Y-axis value |
-| `yAxis.max` | number | Maximum Y-axis value |
-| `visual.lineWidth` | number | Line width in pixels |
-| `visual.areaOpacity` | number | Area fill opacity (0-1) |
-| `visual.connectNulls` | boolean | Connect lines across null values |
-| `visual.stack` | string | Stacking mode: `none`, `all`, `percent` |
+|Option|Type|Description|
+|---|---|---|
+|`legend.position`|string|Legend position: `bottom`, `right`, `hidden`|
+|`legend.mode`|string|Legend display: `list`, `table`|
+|`yAxis.format.unit`|string|Unit for Y-axis values|
+|`yAxis.min`|number|Minimum Y-axis value|
+|`yAxis.max`|number|Maximum Y-axis value|
+|`visual.lineWidth`|number|Line width in pixels|
+|`visual.areaOpacity`|number|Area fill opacity (0-1)|
+|`visual.connectNulls`|boolean|Connect lines across null values|
+|`visual.stack`|string|Stacking mode: `none`, `all`, `percent`|
 
 ### Common Units
 
@@ -70,7 +71,7 @@ MyPanel:
 
 Displays a single large number with optional sparkline.
 
-### Basic Example
+### StatChart Basic Example
 
 ```yaml
 CPUStat:
@@ -113,23 +114,25 @@ CPUStat:
                 ORDER BY x
 ```
 
-### Configuration Options
+### StatChart Configuration Options
 
-| Option | Type | Description |
-|--------|------|-------------|
-| `calculation` | string | Value calculation: `last`, `first`, `mean`, `sum`, `min`, `max` |
-| `format.unit` | string | Display unit |
-| `thresholds.mode` | string | Threshold mode: `absolute`, `percentage` |
-| `thresholds.steps` | array | Color steps with value and color |
-| `sparkline.show` | boolean | Show sparkline chart |
-| `sparkline.width` | number | Sparkline line width |
-| `sparkline.color` | string | Sparkline color (hex) |
+|Option|Type|Description|
+|---|---|---|
+<!-- markdownlint-disable MD013 -->
+|`calculation`|string|Value calculation: `last`, `first`, `mean`, `sum`, `min`, `max`|
+<!-- markdownlint-enable MD013 -->
+|`format.unit`|string|Display unit|
+|`thresholds.mode`|string|Threshold mode: `absolute`, `percentage`|
+|`thresholds.steps`|array|Color steps with value and color|
+|`sparkline.show`|boolean|Show sparkline chart|
+|`sparkline.width`|number|Sparkline line width|
+|`sparkline.color`|string|Sparkline color (hex)|
 
 ## GaugeChart
 
 Displays a gauge/meter visualization.
 
-### Basic Example
+### GaugeChart Basic Example
 
 ```yaml
 MemoryGauge:
@@ -165,20 +168,20 @@ MemoryGauge:
                   AND recorded_timestamp > now() - interval '5 minutes'
 ```
 
-### Configuration Options
+### GaugeChart Configuration Options
 
-| Option | Type | Description |
-|--------|------|-------------|
-| `calculation` | string | Value calculation method |
-| `format.unit` | string | Display unit |
-| `max` | number | Maximum gauge value |
-| `thresholds.steps` | array | Color steps |
+|Option|Type|Description|
+|---|---|---|
+|`calculation`|string|Value calculation method|
+|`format.unit`|string|Display unit|
+|`max`|number|Maximum gauge value|
+|`thresholds.steps`|array|Color steps|
 
 ## BarChart
 
 Displays data as bar charts.
 
-### Basic Example
+### BarChart Basic Example
 
 ```yaml
 RequestsByEndpoint:
@@ -212,20 +215,20 @@ RequestsByEndpoint:
                 LIMIT 10
 ```
 
-### Configuration Options
+### BarChart Configuration Options
 
-| Option | Type | Description |
-|--------|------|-------------|
-| `calculation` | string | Value calculation |
-| `format.unit` | string | Display unit |
-| `orientation` | string | Bar orientation: `horizontal`, `vertical` |
-| `sort` | string | Sort order: `ascending`, `descending`, `none` |
+|Option|Type|Description|
+|---|---|---|
+|`calculation`|string|Value calculation|
+|`format.unit`|string|Display unit|
+|`orientation`|string|Bar orientation: `horizontal`, `vertical`|
+|`sort`|string|Sort order: `ascending`, `descending`, `none`|
 
 ## Table
 
 Displays tabular data.
 
-### Basic Example
+### Table Basic Example
 
 ```yaml
 TopEndpoints:
@@ -263,8 +266,8 @@ TopEndpoints:
                   attributes->>'http.route' AS endpoint,
                   count(1) AS requests,
                   avg(EXTRACT(EPOCH FROM duration) * 1000) AS avg_ms,
-                  count(CASE WHEN attributes->>'http.status_code' LIKE '5%' THEN 1 END)::float /
-                    NULLIF(count(1), 0) * 100 AS error_rate
+                  count(CASE WHEN attributes->>'http.status_code' LIKE '5%'
+                    THEN 1 END)::float / NULLIF(count(1), 0) * 100 AS error_rate
                 FROM records
                 WHERE span_name LIKE 'HTTP%'
                   AND start_timestamp > now() - interval '1 hour'
@@ -273,20 +276,20 @@ TopEndpoints:
                 LIMIT 20
 ```
 
-### Configuration Options
+### Table Configuration Options
 
-| Option | Type | Description |
-|--------|------|-------------|
-| `columnSettings.<col>.name` | string | Column display name |
-| `columnSettings.<col>.width` | number | Column width in pixels |
-| `columnSettings.<col>.format.unit` | string | Value format unit |
-| `columnSettings.<col>.hidden` | boolean | Hide column |
+|Option|Type|Description|
+|---|---|---|
+|`columnSettings.<col>.name`|string|Column display name|
+|`columnSettings.<col>.width`|number|Column width in pixels|
+|`columnSettings.<col>.format.unit`|string|Value format unit|
+|`columnSettings.<col>.hidden`|boolean|Hide column|
 
 ## Markdown
 
 Displays static markdown text.
 
-### Basic Example
+### Markdown Basic Example
 
 ```yaml
 Instructions:
@@ -313,11 +316,11 @@ Instructions:
           - Memory > 90% for 5 minutes
 ```
 
-### Configuration Options
+### Markdown Configuration Options
 
-| Option | Type | Description |
-|--------|------|-------------|
-| `text` | string | Markdown content |
+|Option|Type|Description|
+|---|---|---|
+|`text`|string|Markdown content|
 
 ## Layout Configuration
 

@@ -1,34 +1,35 @@
 # Logfire Query Reference
 
-Logfire uses a custom query plugin called `LogfireTimeSeriesQuery` that executes SQL against your telemetry data.
+Logfire uses a custom query plugin called `LogfireTimeSeriesQuery` that executes
+SQL against your telemetry data.
 
 ## Tables
 
-| Table | Use Case |
-|-------|----------|
-| `records` | Spans, logs, traces |
-| `metrics` | OTel metrics (counters, gauges, histograms) |
+|Table|Use Case|
+|---|---|
+|`records`|Spans, logs, traces|
+|`metrics`|OTel metrics (counters, gauges, histograms)|
 
 ## Records Table
 
 The `records` table contains all spans and logs from your application.
 
-### Key Fields
+### Key Fields - Records
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `start_timestamp` | timestamp | When the span/log started |
-| `end_timestamp` | timestamp | When the span ended |
-| `duration` | interval | Span duration |
-| `span_name` | string | Operation name |
-| `level` | string | Log level (info, warn, error, etc.) |
-| `message` | string | Log message |
-| `attributes` | jsonb | All OpenTelemetry attributes |
-| `trace_id` | string | Trace identifier |
-| `span_id` | string | Span identifier |
-| `parent_span_id` | string | Parent span identifier |
-| `service_name` | string | Service name |
-| `kind` | string | Span kind (client, server, internal, etc.) |
+|Field|Type|Description|
+|---|---|---|
+|`start_timestamp`|timestamp|When the span/log started|
+|`end_timestamp`|timestamp|When the span ended|
+|`duration`|interval|Span duration|
+|`span_name`|string|Operation name|
+|`level`|string|Log level (info, warn, error, etc.)|
+|`message`|string|Log message|
+|`attributes`|jsonb|All OpenTelemetry attributes|
+|`trace_id`|string|Trace identifier|
+|`span_id`|string|Span identifier|
+|`parent_span_id`|string|Parent span identifier|
+|`service_name`|string|Service name|
+|`kind`|string|Span kind (client, server, internal, etc.)|
 
 ### Accessing Attributes
 
@@ -50,27 +51,28 @@ attributes->'http.request.header'->>'content-type'
 
 The `metrics` table contains OpenTelemetry metrics.
 
-### Key Fields
+### Key Fields - Metrics
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `recorded_timestamp` | timestamp | When the metric was recorded |
-| `metric_name` | string | Metric name (e.g., `system.cpu.utilization`) |
-| `scalar_value` | double | Value for counters/gauges |
-| `histogram_count` | int | Count for histograms |
-| `histogram_sum` | double | Sum for histograms |
-| `histogram_min` | double | Minimum for histograms |
-| `histogram_max` | double | Maximum for histograms |
-| `attributes` | jsonb | All OpenTelemetry attributes |
-| `unit` | string | Metric unit |
+|Field|Type|Description|
+|---|---|---|
+|`recorded_timestamp`|timestamp|When the metric was recorded|
+|`metric_name`|string|Metric name (e.g., `system.cpu.utilization`)|
+|`scalar_value`|double|Value for counters/gauges|
+|`histogram_count`|int|Count for histograms|
+|`histogram_sum`|double|Sum for histograms|
+|`histogram_min`|double|Minimum for histograms|
+|`histogram_max`|double|Maximum for histograms|
+|`attributes`|jsonb|All OpenTelemetry attributes|
+|`unit`|string|Metric unit|
 
 ## Special Variables
 
-| Variable | Description |
-|----------|-------------|
-| `$resolution` | Auto-calculated time bucket based on dashboard time range |
+|Variable|Description|
+|---|---|
+|`$resolution`|Auto-calculated time bucket based on dashboard time range|
 
-The `$resolution` variable is **required** for all time series queries. It automatically adjusts based on the selected time range.
+The `$resolution` variable is **required** for all time series queries. It
+automatically adjusts based on the selected time range.
 
 ## Query Patterns
 
@@ -211,7 +213,8 @@ WHERE start_timestamp > now() - interval '1 hour'
 
 1. **Always filter by time** - Use time range filters in WHERE clauses
 2. **Limit results** - Use LIMIT for table queries
-3. **Index-friendly filters** - Filter on indexed columns first (timestamp, metric_name, span_name)
+3. **Index-friendly filters** - Filter on indexed columns first (timestamp,
+   metric_name, span_name)
 4. **Avoid SELECT *** - Only select needed columns
 5. **Use $resolution** - Let the dashboard calculate optimal bucket size
 

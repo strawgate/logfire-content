@@ -19,7 +19,8 @@ This integration provides dashboards for monitoring:
 
 ## Collector Configuration
 
-Deploy the OpenTelemetry Collector with the `hostmetricsreceiver`. See `collector.yaml` for a complete configuration example.
+Deploy the OpenTelemetry Collector with the `hostmetricsreceiver`. See
+`collector.yaml` for a complete configuration example.
 
 ### Minimum Configuration
 
@@ -52,7 +53,7 @@ service:
 This integration uses the following OpenTelemetry semantic convention metrics:
 
 | Metric | Type | Description |
-|--------|------|-------------|
+| ------- | ---- | ----------- |
 | `system.cpu.utilization` | Gauge | CPU utilization (0-1) |
 | `system.memory.usage` | Gauge | Memory usage in bytes |
 | `system.memory.utilization` | Gauge | Memory utilization (0-1) |
@@ -76,7 +77,7 @@ The `overview.yaml` dashboard provides:
 ### Installation
 
 ```bash
-logfire-cli push integrations/host-metrics/overview.yaml
+logfire-cli dashboards import integrations/host-metrics/overview.yaml
 ```
 
 ## Alerts
@@ -84,7 +85,7 @@ logfire-cli push integrations/host-metrics/overview.yaml
 Common alert thresholds to consider:
 
 | Condition | Warning | Critical |
-|-----------|---------|----------|
+| --------- | ------- | -------- |
 | CPU Utilization | > 80% | > 95% |
 | Memory Utilization | > 80% | > 95% |
 | Filesystem Utilization | > 80% | > 95% |

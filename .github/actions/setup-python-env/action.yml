@@ -1,6 +1,6 @@
+---
 name: Setup Python Environment
 description: Set up Python and install UV package manager with dependencies
-
 inputs:
   python-version:
     description: Python version to use
@@ -10,7 +10,6 @@ inputs:
     description: Whether to install documentation dependencies
     required: false
     default: 'false'
-
 runs:
   using: composite
   steps:
@@ -18,15 +17,13 @@ runs:
       uses: actions/setup-python@v5
       with:
         python-version: ${{ inputs.python-version }}
-
     - name: Install UV
       uses: astral-sh/setup-uv@v5
-
     - name: Install dependencies
       shell: bash
-      run: |
+      run: |-
         if [ "${{ inputs.install-docs }}" = "true" ]; then
-          uv sync --group docs
+          uv sync --group dev --group docs
         else
-          uv sync
+          uv sync --group dev
         fi
